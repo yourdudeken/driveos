@@ -100,7 +100,7 @@ export const googleDriveService = {
             tasksFolderId = folders.TASKS;
         }
 
-        const query = `('${tasksFolderId}' in parents or sharedWithMe = true) and mimeType='application/json' and trashed=false`;
+        const query = `'${tasksFolderId}' in parents and mimeType='application/json' and trashed=false`;
         const response = await axios.get(`${DRIVE_API_URL}/files`, {
             params: {
                 q: query,
@@ -148,7 +148,7 @@ export const googleDriveService = {
             parents: [tasksFolderId],
             properties: {
                 app: 'cloudtodo',
-                type: task.taskType.isPersonal ? 'personal' : 'collaborative'
+                type: 'personal'
             }
         };
 
@@ -255,49 +255,4 @@ export const googleDriveService = {
         return response.data;
     },
 
-    async shareTask(taskId: string, email: string) {
-        // 1. Share the task file itself
-        await this.shareFile(taskId, email);
-
-        // 2. Share the attachments folder if it exists
-        try {
-            const folders = await this.ensureFolderStructure();
-            const attachmentsRootId = folders.ATTACHMENTS;
-            const taskFolderId = await this.findFolder(taskId, attachmentsRootId);
-            if (taskFolderId) {
-                await this.shareFile(taskFolderId, email);
-            }
-        } catch (error) {
-            console.error('Failed to share attachments folder:', error);
-            // Non-blocking error, task file is already shared
-        }
-    },
-
-    async shareFile(fileId: string, email: string) {
-        const permission = {
-            role: 'writer',
-            type: 'user',
-            emailAddress: email
-        };
-
-        const response = await axios.post(`${DRIVE_API_URL}/files/${fileId}/permissions`, permission, {
-            params: { sendNotificationEmail: true },
-            headers: getHeaders()
-        });
-        return response.data;
-    },
-
-    async getPermissions(fileId: string) {
-        const response = await axios.get(`${DRIVE_API_URL}/files/${fileId}/permissions`, {
-            params: { fields: 'permissions(id, emailAddress, role, displayName, photoLink)' },
-            headers: getHeaders()
-        });
-        return response.data.permissions;
-    },
-
-    async removePermission(fileId: string, permissionId: string) {
-        await axios.delete(`${DRIVE_API_URL}/files/${fileId}/permissions/${permissionId}`, {
-            headers: getHeaders()
-        });
-    }
 };

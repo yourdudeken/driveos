@@ -75,7 +75,7 @@ export const useTasksStore = create<TasksState>()(
                     }));
                 } catch (error) {
                     console.error('Failed to update task:', error);
-                    set({ error: 'Update failed. Check for collaborative changes.', isLoading: false });
+                    set({ error: 'Update failed. Please try again.', isLoading: false });
                 }
             },
 

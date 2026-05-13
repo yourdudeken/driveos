@@ -1,29 +1,25 @@
-# CloudTodo - Google Drive-Based Task Synergy
+# CloudTodo - Google Drive-Based Task Management
 
 ## Overview
 
-CloudTodo is a premium, privacy-first task management ecosystem that leverages your personal Google Drive as a secure, decentralized backend. It eliminates the need for third-party databases, providing you with 100% ownership, portability, and control over your data.
-
-By utilizing the native capabilities of the Google Drive API, CloudTodo provides a rich, collaborative experience while maintaining the absolute privacy of a local application.
+CloudTodo is a privacy-first task management app that leverages your personal Google Drive as a secure, decentralized backend. It eliminates the need for third-party databases, providing you with 100% ownership, portability, and control over your data.
 
 ---
 
 ## Key Features
 
-### User-Owned Ecology
+### User-Owned Storage
 - **Decentralized Storage**: All tasks are stored as JSON files within your own Google Drive storage space.
 - **Native Attachments**: High-speed handling of images, videos, documents, and audio recordings, managed in a structured folder hierarchy.
 - **Zero-Server Footprint**: Your data never touches an external database. It moves directly between your browser and Google's global infrastructure.
 
-### Native Collaboration
-- **True Sharing**: Invite collaborators via email to specific tasks. The application orchestrates native Google Drive permissions (Writer/Owner).
-- **Collaborative Sync Hub**: Manage all active collaborators directly within the task interface. Revoke or grant access with surgical precision.
-- **Auto-Discovery**: Collaborative tasks shared with you by others are automatically discovered and injected into your dashboard using appProperties metadata.
+### AI-Powered Suggestions
+- **Smart Completions**: OpenAI-powered suggestions for task titles, descriptions, categories, and search — debounced and served via `gpt-4o-mini`.
 
 ### Premium UI/UX
 - **Rich Aesthetics**: A professional dark-mode interface with glassmorphism, smooth transitions, and vibrant accents.
-- **Multi-View System**: Pivot between a high-efficiency List View, a visual Grid View, and a tactical Kanban Board.
-- **Visual Intelligence**: Custom indicators for Solo Missions versus Team Efforts, plus dedicated markers for Pinned and Starred tasks.
+- **Multi-View System**: Pivot between a high-efficiency Grid View and a tactical Kanban Board.
+- **Visual Intelligence**: Dedicated markers for Pinned and Starred tasks.
 
 ### Integrated Cloud Assets
 - **Atomic Categorization**: Attachments are organized per-task, ensuring all related media stays within its own context.
@@ -47,11 +43,11 @@ User's Google Drive
         │   └── document.pdf
 ```
 
-### Data Synergy Model
+### Data Flow
 1. **Authentication**: Secure handshake via Google OAuth 2.0 with minimal scope requirements.
-2. **Metadata Tracking**: Tasks are tagged with custom properties for instant indexing and cross-device discovery.
-3. **Permission Orchestration**: Collaborative tasks utilize the Google Drive Permissions API for secure, multi-user write access.
-4. **Binary Stream**: Attachments are managed via Multipart Uploads to ensure integrity and performance.
+2. **Storage**: Tasks saved as JSON files to your Google Drive.
+3. **Attachments**: Files uploaded via Multipart Upload to per-task folders.
+4. **Sync**: Local state syncs with Drive every 30 seconds.
 
 ---
 
@@ -63,7 +59,8 @@ User's Google Drive
 - **Styling**: Tailwind CSS 4 (Custom Design System)
 - **Icons**: Lucide React
 - **Networking**: Axios (Direct Google API Integration)
-- **Security**: OAuth 2.0 Scoped Access
+- **AI**: OpenAI API (gpt-4o-mini)
+- **Auth**: OAuth 2.0 Scoped Access
 
 ---
 
@@ -72,6 +69,7 @@ User's Google Drive
 ### Prerequisites
 - Node.js 20 or higher
 - A Google Cloud Project with the Google Drive API enabled
+- An OpenAI API key
 
 ### 1. Configure Google Cloud
 1. Enable the Google Drive API in the Google Cloud Console.
@@ -89,6 +87,7 @@ npm install
 
 # Configure environment
 echo "VITE_GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com" > .env
+echo "VITE_OPENAI_API_KEY=sk-your-openai-api-key" >> .env
 ```
 
 ### 3. Execution
@@ -104,7 +103,7 @@ npm run dev
 Your productivity data is a private conversation between you and your storage provider. CloudTodo does not have a backend, tracking pixels, or an analytics engine.
 
 ### Scoped Access
-The application requests the drive.file scope. This means it can only access files it created or those you explicitly opened with it. It cannot read your other private documents on Google Drive.
+The application requests the `drive.file` scope. This means it can only access files it created or those you explicitly opened with it. It cannot read your other private documents on Google Drive.
 
 ---
 
