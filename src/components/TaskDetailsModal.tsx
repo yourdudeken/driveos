@@ -1,7 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
-import type { Task, PriorityLevel, Attachments, AttachmentItem, GoogleDrivePermission } from '@/types';
+import { useState, useEffect } from 'react';
+import type { Task, PriorityLevel, Attachments, AttachmentItem } from '@/types';
 import { useTasksStore } from '@/store/tasksStore';
-import { useAuthStore } from '@/store/authStore';
 import { googleDriveService } from '@/lib/googleDrive';
 import {
     Dialog,
@@ -15,9 +14,10 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import {
     Loader2, File as FileIcon, Plus, ArrowRight, Music, Video,
-    Edit2, Check, X, Trash2, Paperclip, ImageIcon, Star, Pin,
-    Users, Send, UserMinus, User
+    Edit2, Check, X, Trash2, Paperclip, ImageIcon, Star, Pin
 } from 'lucide-react';
+import { useAISuggestions } from '@/hooks/useAISuggestions';
+import { AISuggestions } from '@/components/AISuggestions';
 
 function DriveImage({ fileId, alt }: { fileId: string; alt: string }) {
     const [url, setUrl] = useState<string | null>(null);
@@ -77,7 +77,9 @@ export function TaskDetailsModal({ task, onClose }: TaskDetailsModalProps) {
     const [editForm, setEditForm] = useState<Partial<Task>>({});
     const [newFiles, setNewFiles] = useState<File[]>([]);
     const [removedAttachmentIds, setRemovedAttachmentIds] = useState<string[]>([]);
-    const [newComment, setNewComment] = useState('');
+
+    const editTitleAI = useAISuggestions('task title', editForm.taskTitle ?? '');
+    const editDescAI = useAISuggestions('description', editForm.description ?? '');
 
     useEffect(() => {
         if (task) {
@@ -85,7 +87,6 @@ export function TaskDetailsModal({ task, onClose }: TaskDetailsModalProps) {
             setNewFiles([]);
             setRemovedAttachmentIds([]);
             setIsEditing(false);
-            setNewComment('');
         }
     }, [task]);
 
@@ -93,72 +94,6 @@ export function TaskDetailsModal({ task, onClose }: TaskDetailsModalProps) {
     const getAttachmentName = (item: string | AttachmentItem, fallback: string = 'Resource') => {
         if (typeof item === 'string') return `${fallback} ${item.slice(0, 8)}`;
         return item.name || `${fallback} ${item.id.slice(0, 8)}`;
-    };
-
-    const [permissions, setPermissions] = useState<GoogleDrivePermission[]>([]);
-    const [isSharing, setIsSharing] = useState(false);
-    const [inviteEmail, setInviteEmail] = useState('');
-
-    const fetchPermissions = useCallback(async () => {
-        if (!task?.googleDriveFileId) return;
-        try {
-            const perms = await googleDriveService.getPermissions(task.googleDriveFileId);
-            setPermissions(perms || []);
-        } catch (error) {
-            console.error('Failed to fetch permissions:', error);
-        }
-    }, [task?.googleDriveFileId]);
-
-    useEffect(() => {
-        if (task?.googleDriveFileId) {
-            fetchPermissions();
-        }
-    }, [task?.googleDriveFileId, fetchPermissions]);
-
-    const handleInvite = async () => {
-        if (!inviteEmail || !task?.googleDriveFileId) return;
-        setIsSharing(true);
-        try {
-            await googleDriveService.shareTask(task.googleDriveFileId, inviteEmail);
-            setInviteEmail('');
-            await fetchPermissions();
-        } catch (error) {
-            console.error('Failed to share file:', error);
-        } finally {
-            setIsSharing(false);
-        }
-    };
-
-    const handleRemovePermission = async (permId: string) => {
-        if (!task?.googleDriveFileId) return;
-        try {
-            await googleDriveService.removePermission(task.googleDriveFileId, permId);
-            await fetchPermissions();
-        } catch (error) {
-            console.error('Failed to remove permission:', error);
-        }
-    };
-
-    const handleAddComment = async () => {
-        const { user } = useAuthStore.getState();
-        if (!newComment.trim() || !task || !user) return;
-
-        const comment = {
-            id: crypto.randomUUID(),
-            userId: user.id,
-            userEmail: user.email,
-            content: newComment.trim(),
-            createdAt: new Date().toISOString()
-        };
-
-        const updatedTask = {
-            ...task,
-            comments: [...(task.comments || []), comment],
-            updatedDate: new Date().toISOString()
-        };
-
-        await updateTask(updatedTask);
-        setNewComment('');
     };
 
     if (!task) return null;
@@ -286,19 +221,7 @@ export function TaskDetailsModal({ task, onClose }: TaskDetailsModalProps) {
                                         {task.priority === 1 ? 'High Priority' : task.priority === 2 ? 'Normal Priority' : 'Low Priority'}
                                     </span>
                                 )}
-                                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10">
-                                    {task.taskType.isPersonal ? (
-                                        <>
-                                            <User className="w-3 h-3 text-gray-500" />
-                                            <span className="text-[9px] font-black uppercase tracking-widest text-gray-400">Solo Mission</span>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Users className="w-3 h-3 text-indigo-400" />
-                                            <span className="text-[9px] font-black uppercase tracking-widest text-indigo-400">Team Effort</span>
-                                        </>
-                                    )}
-                                </div>
+
                             </div>
                             <div className="flex items-center gap-2">
                                 <button
@@ -324,12 +247,15 @@ export function TaskDetailsModal({ task, onClose }: TaskDetailsModalProps) {
 
                         {isEditing ? (
                             <div className="mt-6 space-y-4">
-                                <Input
-                                    value={editForm.taskTitle}
-                                    onChange={(e) => setEditForm({ ...editForm, taskTitle: e.target.value })}
-                                    className="text-3xl font-black bg-white/5 border-white/10 h-16 rounded-2xl px-6 focus:ring-indigo-500/40"
-                                    placeholder="Task Title"
-                                />
+                                <div className="relative">
+                                    <Input
+                                        value={editForm.taskTitle}
+                                        onChange={(e) => setEditForm({ ...editForm, taskTitle: e.target.value })}
+                                        className="text-3xl font-black bg-white/5 border-white/10 h-16 rounded-2xl px-6 focus:ring-indigo-500/40"
+                                        placeholder="Task Title"
+                                    />
+                                    <AISuggestions suggestions={editTitleAI.suggestions} isLoading={editTitleAI.isLoading} showSuggestions={editTitleAI.showSuggestions} onSelect={(s) => setEditForm({ ...editForm, taskTitle: s })} onDismiss={editTitleAI.dismiss} />
+                                </div>
                                 <div className="flex gap-4">
                                     <Input
                                         type="date"
@@ -346,21 +272,7 @@ export function TaskDetailsModal({ task, onClose }: TaskDetailsModalProps) {
                                         <option value="in-progress">In Progress</option>
                                         <option value="completed">Completed</option>
                                     </select>
-                                    <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-4">
-                                        <Label className="text-[10px] font-black uppercase tracking-widest text-gray-500 mr-2">Type:</Label>
-                                        <button
-                                            onClick={() => setEditForm({ ...editForm, taskType: { ...editForm.taskType!, isPersonal: true, isCollaborative: false } })}
-                                            className={`text-[9px] font-black uppercase tracking-wider px-2 py-1 rounded-md transition-all ${editForm.taskType?.isPersonal ? 'bg-indigo-600 text-white' : 'text-gray-500 hover:text-white'}`}
-                                        >
-                                            Personal
-                                        </button>
-                                        <button
-                                            onClick={() => setEditForm({ ...editForm, taskType: { ...editForm.taskType!, isPersonal: false, isCollaborative: true } })}
-                                            className={`text-[9px] font-black uppercase tracking-wider px-2 py-1 rounded-md transition-all ${editForm.taskType?.isCollaborative ? 'bg-indigo-600 text-white' : 'text-gray-500 hover:text-white'}`}
-                                        >
-                                            Collab
-                                        </button>
-                                    </div>
+
                                 </div>
                             </div>
                         ) : (
@@ -381,12 +293,15 @@ export function TaskDetailsModal({ task, onClose }: TaskDetailsModalProps) {
                                 Context & Mission
                             </h4>
                             {isEditing ? (
-                                <textarea
-                                    value={editForm.description}
-                                    onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
-                                    className="w-full min-h-[150px] p-6 rounded-[1.5rem] bg-white/[0.03] border border-white/5 text-base text-gray-300 leading-relaxed focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all shadow-inner"
-                                    placeholder="Describe your goals..."
-                                />
+                                <div className="relative">
+                                    <textarea
+                                        value={editForm.description}
+                                        onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                                        className="w-full min-h-[150px] p-6 rounded-[1.5rem] bg-white/[0.03] border border-white/5 text-base text-gray-300 leading-relaxed focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all shadow-inner"
+                                        placeholder="Describe your goals..."
+                                    />
+                                    <AISuggestions suggestions={editDescAI.suggestions} isLoading={editDescAI.isLoading} showSuggestions={editDescAI.showSuggestions} onSelect={(s) => setEditForm({ ...editForm, description: editForm.description ? `${editForm.description} ${s}` : s })} onDismiss={editDescAI.dismiss} />
+                                </div>
                             ) : (
                                 <div className="p-8 rounded-[2rem] bg-white/[0.03] border border-white/5 text-lg text-gray-400 leading-relaxed shadow-inner">
                                     {task.description || "No specific mission parameters set for this task."}
@@ -394,103 +309,7 @@ export function TaskDetailsModal({ task, onClose }: TaskDetailsModalProps) {
                             )}
                         </div>
 
-                        {task.taskType.isCollaborative && (
-                            <div className="grid gap-4 mt-8 animate-in slide-in-from-bottom-2 duration-500">
-                                <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-indigo-400 flex items-center gap-2">
-                                    <Users className="w-3 h-3" />
-                                    Collaborative Sync
-                                </h4>
-                                <div className="space-y-4">
-                                    <div className="flex flex-wrap gap-3">
-                                        {permissions.map((perm) => (
-                                            <div key={perm.id} className="flex items-center gap-3 px-4 py-2 bg-indigo-500/5 border border-indigo-500/10 rounded-[1rem] group transition-all hover:border-indigo-500/30">
-                                                <div className="w-8 h-8 rounded-full bg-indigo-600/20 flex items-center justify-center font-black text-indigo-400 border border-indigo-500/20 text-xs">
-                                                    {perm.emailAddress?.charAt(0).toUpperCase() || 'U'}
-                                                </div>
-                                                <div className="flex flex-col">
-                                                    <span className="text-xs font-bold text-white max-w-[200px] truncate">{perm.emailAddress}</span>
-                                                    <span className="text-[8px] font-black uppercase tracking-widest text-gray-500">{perm.role}</span>
-                                                </div>
-                                                {perm.role !== 'owner' && (
-                                                    <button
-                                                        onClick={() => handleRemovePermission(perm.id)}
-                                                        className="ml-2 w-6 h-6 flex items-center justify-center rounded-lg hover:bg-red-500/10 text-gray-600 hover:text-red-400 transition-all opacity-0 group-hover:opacity-100"
-                                                    >
-                                                        <UserMinus className="w-3.5 h-3.5" />
-                                                    </button>
-                                                )}
-                                            </div>
-                                        ))}
-                                    </div>
 
-                                    {isEditing && (
-                                        <div className="flex gap-2 max-w-md animate-in fade-in duration-300">
-                                            <Input
-                                                type="email"
-                                                placeholder="Invite by email..."
-                                                value={inviteEmail}
-                                                onChange={(e) => setInviteEmail(e.target.value)}
-                                                className="bg-white/5 border-white/10 h-11 rounded-xl text-sm"
-                                            />
-                                            <Button
-                                                onClick={handleInvite}
-                                                disabled={isSharing || !inviteEmail}
-                                                className="bg-indigo-600 hover:bg-indigo-700 h-11 px-5 rounded-xl transition-all shadow-lg shadow-indigo-600/20"
-                                            >
-                                                {isSharing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                                            </Button>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        )}
-
-                        <div className="grid gap-6 mt-8">
-                            <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-500 flex items-center gap-2">
-                                <span className="w-2 h-2 rounded-full bg-indigo-500"></span>
-                                Communications Hub
-                            </h4>
-                            <div className="space-y-4">
-                                <div className="max-h-[300px] overflow-y-auto space-y-4 pr-2 custom-scrollbar">
-                                    {!task.comments || task.comments.length === 0 ? (
-                                        <div className="text-sm text-gray-600 italic px-4 py-8 text-center bg-white/[0.01] rounded-2xl border border-dashed border-white/5">
-                                            No transmissions yet. Start the conversation below.
-                                        </div>
-                                    ) : (
-                                        task.comments.map((comment) => (
-                                            <div key={comment.id} className="flex gap-4 p-4 rounded-2xl bg-white/[0.02] border border-white/5">
-                                                <div className="w-8 h-8 rounded-full bg-indigo-500/10 flex items-center justify-center text-[10px] font-black text-indigo-400 border border-indigo-500/10 flex-shrink-0">
-                                                    {comment.userEmail.charAt(0).toUpperCase()}
-                                                </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <div className="flex items-center justify-between mb-1">
-                                                        <span className="text-xs font-bold text-gray-400">{comment.userEmail}</span>
-                                                        <span className="text-[9px] font-medium text-gray-600">{new Date(comment.createdAt).toLocaleTimeString()}</span>
-                                                    </div>
-                                                    <p className="text-sm text-gray-300 leading-relaxed">{comment.content}</p>
-                                                </div>
-                                            </div>
-                                        ))
-                                    )}
-                                </div>
-
-                                <div className="relative mt-4">
-                                    <textarea
-                                        value={newComment}
-                                        onChange={(e) => setNewComment(e.target.value)}
-                                        placeholder="Broadcast a message..."
-                                        className="w-full bg-white/[0.03] border border-white/10 rounded-2xl p-4 pr-16 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all resize-none h-24"
-                                    />
-                                    <button
-                                        onClick={handleAddComment}
-                                        disabled={!newComment.trim()}
-                                        className="absolute bottom-4 right-4 p-2.5 rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 disabled:grayscale transition-all shadow-lg shadow-indigo-600/20"
-                                    >
-                                        <Send className="w-4 h-4" />
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
 
                         <div className="border-t border-white/5 pt-12">
                             <div className="flex items-center justify-between mb-8">

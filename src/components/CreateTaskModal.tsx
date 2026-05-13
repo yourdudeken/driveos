@@ -12,9 +12,11 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Plus, Loader2, Paperclip, X, Image, Music, Video, File as FileIcon, Star, Pin, User, Users } from 'lucide-react';
+import { Plus, Loader2, Paperclip, X, Image, Music, Video, File as FileIcon, Star, Pin } from 'lucide-react';
 import type { PriorityLevel, Attachments } from '@/types';
 import { googleDriveService } from '@/lib/googleDrive';
+import { useAISuggestions } from '@/hooks/useAISuggestions';
+import { AISuggestions } from '@/components/AISuggestions';
 
 export function CreateTaskModal() {
     const [open, setOpen] = useState(false);
@@ -29,12 +31,14 @@ export function CreateTaskModal() {
         categories: '',
         isStarred: false,
         isPinned: false,
-        isPersonal: true,
-        collaboratorEmail: ''
     });
 
     const [files, setFiles] = useState<File[]>([]);
     const [isUploading, setIsUploading] = useState(false);
+
+    const titleAI = useAISuggestions('task title', formData.title);
+    const descAI = useAISuggestions('description', formData.description);
+    const catAI = useAISuggestions('categories', formData.categories);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files) {
@@ -67,18 +71,13 @@ export function CreateTaskModal() {
                 dueTime: formData.dueTime,
                 reminder: 30,
                 priority: formData.priority,
-                taskType: {
-                    isPersonal: formData.isPersonal,
-                    isCollaborative: !formData.isPersonal
-                },
                 isStarred: formData.isStarred,
                 isPinned: formData.isPinned,
                 categories: formData.categories.split(',').map(c => c.trim()).filter(c => c),
                 tags: [],
                 recurrence: 'None',
                 status: 'todo',
-                attachments, // Empty for now
-                comments: [],
+                attachments,
                 createdDate: new Date().toISOString(),
                 updatedDate: new Date().toISOString(),
             });
@@ -104,11 +103,6 @@ export function CreateTaskModal() {
                 });
             }
 
-            // 4. If collaborative and email provided, share the task (file + attachments folder)
-            if (!formData.isPersonal && formData.collaboratorEmail && savedTask.googleDriveFileId) {
-                await googleDriveService.shareTask(savedTask.googleDriveFileId, formData.collaboratorEmail);
-            }
-
             setOpen(false);
             setFormData({
                 title: '',
@@ -119,8 +113,6 @@ export function CreateTaskModal() {
                 categories: '',
                 isStarred: false,
                 isPinned: false,
-                isPersonal: true,
-                collaboratorEmail: ''
             });
             setFiles([]);
         } catch (error) {
@@ -149,7 +141,7 @@ export function CreateTaskModal() {
                     </DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="grid gap-6 py-4 overflow-y-auto max-h-[80vh] px-1">
-                    <div className="grid gap-2">
+                    <div className="grid gap-2 relative">
                         <Label htmlFor="title" className="text-xs font-bold uppercase tracking-widest text-gray-500 ml-1">Task Title</Label>
                         <Input
                             id="title"
@@ -159,8 +151,9 @@ export function CreateTaskModal() {
                             required
                             className="bg-white/[0.03] border-white/5 rounded-xl h-12 focus:ring-indigo-500/20 focus:border-indigo-500/40"
                         />
+                        <AISuggestions suggestions={titleAI.suggestions} isLoading={titleAI.isLoading} showSuggestions={titleAI.showSuggestions} onSelect={(s) => setFormData({ ...formData, title: s })} onDismiss={titleAI.dismiss} />
                     </div>
-                    <div className="grid gap-2">
+                    <div className="grid gap-2 relative">
                         <Label htmlFor="description" className="text-xs font-bold uppercase tracking-widest text-gray-500 ml-1">Description</Label>
                         <textarea
                             id="description"
@@ -169,6 +162,7 @@ export function CreateTaskModal() {
                             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                             placeholder="Details about your objective..."
                         />
+                        <AISuggestions suggestions={descAI.suggestions} isLoading={descAI.isLoading} showSuggestions={descAI.showSuggestions} onSelect={(s) => setFormData({ ...formData, description: formData.description ? `${formData.description} ${s}` : s })} onDismiss={descAI.dismiss} />
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                         <div className="grid gap-2">
@@ -210,39 +204,7 @@ export function CreateTaskModal() {
                             <Star className={`w-3.5 h-3.5 ${formData.isStarred ? 'fill-current' : ''}`} />
                             <span className="text-[10px] font-black uppercase tracking-widest">Star</span>
                         </button>
-                        <div className="flex items-center gap-1 bg-white/5 border border-white/5 p-1 rounded-xl ml-auto">
-                            <button
-                                type="button"
-                                onClick={() => setFormData({ ...formData, isPersonal: true })}
-                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${formData.isPersonal ? 'bg-indigo-600 text-white' : 'text-gray-500'}`}
-                            >
-                                <User className="w-3 h-3" /> Personal
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setFormData({ ...formData, isPersonal: false })}
-                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${!formData.isPersonal ? 'bg-indigo-600 text-white' : 'text-gray-500'}`}
-                            >
-                                <Users className="w-3 h-3" /> Collab
-                            </button>
                         </div>
-                    </div>
-
-                    {!formData.isPersonal && (
-                        <div className="grid gap-2 animate-in slide-in-from-top-4 duration-500 fade-in">
-                            <Label htmlFor="collaboratorEmail" className="text-[10px] font-black uppercase tracking-widest text-indigo-400 ml-1">Collaborator Email</Label>
-                            <Input
-                                id="collaboratorEmail"
-                                type="email"
-                                value={formData.collaboratorEmail}
-                                onChange={(e) => setFormData({ ...formData, collaboratorEmail: e.target.value })}
-                                placeholder="teammate@example.com"
-                                required={!formData.isPersonal}
-                                className="bg-indigo-500/5 border-indigo-500/20 rounded-xl h-12 focus:ring-indigo-500/20 focus:border-indigo-500/40"
-                            />
-                            <p className="text-[9px] text-gray-400 ml-1 italic">They will be granted write access via Google Drive.</p>
-                        </div>
-                    )}
                     <div className="grid gap-2">
                         <Label className="text-xs font-bold uppercase tracking-widest text-gray-500 ml-1">Priority Level</Label>
                         <div className="grid grid-cols-3 gap-3">
@@ -268,7 +230,7 @@ export function CreateTaskModal() {
                             ))}
                         </div>
                     </div>
-                    <div className="grid gap-2">
+                    <div className="grid gap-2 relative">
                         <Label htmlFor="categories" className="text-xs font-bold uppercase tracking-widest text-gray-500 ml-1">Categories</Label>
                         <Input
                             id="categories"
@@ -277,6 +239,7 @@ export function CreateTaskModal() {
                             placeholder="e.g. Work, Urgent, Personal"
                             className="bg-white/[0.03] border-white/5 rounded-xl h-12 focus:ring-indigo-500/20 focus:border-indigo-500/40"
                         />
+                        <AISuggestions suggestions={catAI.suggestions} isLoading={catAI.isLoading} showSuggestions={catAI.showSuggestions} onSelect={(s) => setFormData({ ...formData, categories: formData.categories ? `${formData.categories}, ${s}` : s })} onDismiss={catAI.dismiss} />
                     </div>
 
                     <div className="grid gap-2">

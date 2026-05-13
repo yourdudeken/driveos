@@ -7,6 +7,8 @@ import { TaskDetailsModal } from '@/components/TaskDetailsModal';
 import { KanbanBoard } from '@/components/KanbanBoard';
 import { Footer } from '@/components/Footer';
 import type { Task } from '@/types';
+import { useAISuggestions } from '@/hooks/useAISuggestions';
+import { AISuggestions } from '@/components/AISuggestions';
 
 export default function Dashboard() {
     const { user, logout } = useAuthStore();
@@ -16,6 +18,8 @@ export default function Dashboard() {
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
     const [activeTab, setActiveTab] = useState('All Tasks');
+
+    const searchAI = useAISuggestions('search', searchQuery);
 
     useEffect(() => {
         fetchTasks();
@@ -153,6 +157,7 @@ export default function Dashboard() {
                                 onChange={(e) => setSearchQuery(e.target.value)}
                                 className="w-full bg-white/[0.03] border border-white/5 rounded-2xl pl-12 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500/40 transition-all placeholder:text-gray-600 text-gray-200"
                             />
+                            <AISuggestions suggestions={searchAI.suggestions} isLoading={searchAI.isLoading} showSuggestions={searchAI.showSuggestions} onSelect={setSearchQuery} onDismiss={searchAI.dismiss} />
                         </div>
                     </div>
 
@@ -236,10 +241,7 @@ export default function Dashboard() {
                                                 </span>
                                                 {task.isPinned && <Pin className="w-3.5 h-3.5 text-blue-400 fill-blue-400/20" />}
                                                 {task.isStarred && <Star className="w-3.5 h-3.5 text-yellow-500 fill-yellow-500/20" />}
-                                                {task.taskType.isPersonal ?
-                                                    <User className="w-3.5 h-3.5 text-gray-500" /> :
-                                                    <User className="w-3.5 h-3.5 text-indigo-400" />
-                                                }
+                                                <User className="w-3.5 h-3.5 text-gray-500" />
                                             </div>
                                             <span className="text-[11px] font-medium text-gray-500">{task.dueDate || 'No date'}</span>
                                         </div>
