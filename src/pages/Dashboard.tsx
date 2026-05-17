@@ -25,6 +25,11 @@ export default function Dashboard() {
 
     useSyncEngine();
 
+    // Rebuild search index when tasks change
+    useEffect(() => {
+        import('@/sync/searchIndex').then(({ searchIndex }) => searchIndex.rebuild(tasks));
+    }, [tasks]);
+
     useEffect(() => {
         hydrateFromCache().then(() => fetchTasks());
 
@@ -73,6 +78,8 @@ export default function Dashboard() {
                 <div
                     className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden"
                     onClick={() => setIsSidebarOpen(false)}
+                    aria-label="Close sidebar overlay"
+                    role="presentation"
                 />
             )}
 
@@ -88,6 +95,7 @@ export default function Dashboard() {
                     <button
                         className="p-2 text-gray-400 hover:text-white transition-colors"
                         onClick={() => setIsSidebarOpen(false)}
+                        aria-label="Close sidebar"
                     >
                         <X className="w-6 h-6" />
                     </button>
@@ -148,6 +156,7 @@ export default function Dashboard() {
                         <button
                             className={`p-2 text-gray-400 hover:text-white transition-colors ${isSidebarOpen ? 'md:hidden' : ''}`}
                             onClick={() => setIsSidebarOpen(true)}
+                            aria-label="Open sidebar"
                         >
                             <Menu className="w-6 h-6" />
                         </button>
@@ -156,6 +165,7 @@ export default function Dashboard() {
                             <input
                                 type="text"
                                 placeholder="Search tasks..."
+                                aria-label="Search tasks"
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                                 className="w-full bg-white/[0.03] border border-white/5 rounded-2xl pl-12 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500/40 transition-all placeholder:text-gray-600 text-gray-200"
@@ -167,12 +177,14 @@ export default function Dashboard() {
                     <div className="flex items-center gap-2 bg-white/[0.03] p-1 rounded-2xl border border-white/5 ml-2">
                         <button
                             onClick={() => setViewMode('grid')}
+                            aria-label="Grid view"
                             className={`p-2 rounded-xl transition-all ${viewMode === 'grid' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'text-gray-500 hover:text-white'}`}
                         >
                             <LayoutGrid className="w-5 h-5" />
                         </button>
                         <button
                             onClick={() => setViewMode('kanban')}
+                            aria-label="Kanban view"
                             className={`p-2 rounded-xl transition-all ${viewMode === 'kanban' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'text-gray-500 hover:text-white'}`}
                         >
                             <Columns className="w-5 h-5" />

@@ -1,8 +1,9 @@
 import { logger } from '@/lib/logger';
-import { withRetry } from '@/lib/retry';
 import { googleDriveService } from '@/lib/googleDrive';
 import { cacheStore } from './cacheStore';
 import { syncQueue } from './syncQueue';
+import { changeTracker } from './changeTracker';
+import { conflictResolver } from './conflictResolver';
 import type { Task } from '@/types';
 
 type SyncListener = (status: SyncStatus) => void;
@@ -11,17 +12,30 @@ export interface SyncStatus {
     state: 'idle' | 'syncing' | 'error' | 'offline';
     lastSyncAt: string | null;
     pendingMutations: number;
+    conflicts: number;
     error?: string;
 }
 
+interface SyncTelemetry {
+    totalSyncs: number;
+    totalConflicts: number;
+    totalBytesRead: number;
+    syncDurations: number[];
+}
+
 class SyncEngine {
-    private status: SyncStatus = { state: 'idle', lastSyncAt: null, pendingMutations: 0 };
+    private status: SyncStatus = { state: 'idle', lastSyncAt: null, pendingMutations: 0, conflicts: 0 };
     private listeners = new Set<SyncListener>();
     private pollTimer: ReturnType<typeof setInterval> | null = null;
     private isRunning = false;
+    private telemetry: SyncTelemetry = { totalSyncs: 0, totalConflicts: 0, totalBytesRead: 0, syncDurations: [] };
 
     getStatus(): SyncStatus {
         return { ...this.status };
+    }
+
+    getTelemetry(): SyncTelemetry {
+        return { ...this.telemetry };
     }
 
     subscribe(listener: SyncListener): () => void {
@@ -45,13 +59,14 @@ class SyncEngine {
 
         logger.info('Sync engine started', { pollIntervalMs });
 
-        // Process offline queue first
         await this.processQueue();
-
-        // Initial sync
         await this.sync();
 
-        // Periodic poll
+        window.addEventListener('online', () => {
+            logger.info('Back online — running sync');
+            this.sync();
+        });
+
         this.pollTimer = setInterval(() => this.sync(), pollIntervalMs);
     }
 
@@ -71,49 +86,96 @@ class SyncEngine {
             return;
         }
 
+        const startTime = performance.now();
         this.setState({ state: 'syncing', pendingMutations: await syncQueue.pendingCount() });
 
         try {
-            // Hydrate from cache first if empty
-            if (this.status.lastSyncAt === null) {
-                const cached = await cacheStore.getTasks();
-                if (cached.length > 0) {
-                    // Use cached data as fast initial render
-                }
-            }
-
-            // Fetch changes from Drive
-            const folders = await googleDriveService.ensureFolderStructure();
-            const remoteTasks = await withRetry(() =>
-                googleDriveService.listTasks(folders.TASKS), { maxAttempts: 3 }
+            const { changes, newPageToken } = await changeTracker.fetchChanges(
+                await changeTracker.getSavedPageToken()
             );
 
-            // Detect local-first task IDs not yet in remote (created offline)
+            if (changes.length === 0 && this.status.lastSyncAt !== null) {
+                this.telemetry.totalSyncs++;
+                this.setState({
+                    state: 'idle',
+                    lastSyncAt: new Date().toISOString(),
+                    pendingMutations: await syncQueue.pendingCount(),
+                });
+                return;
+            }
+
             const cachedTasks = await cacheStore.getTasks();
-            const remoteIds = new Set(remoteTasks.map(t => t.id));
+            const cachedMap = new Map(cachedTasks.map(t => [t.id, t]));
+            const mergedTasks: Task[] = [...cachedTasks];
+            const mergedIds = new Set(mergedTasks.map(t => t.id));
 
-            const mergedTasks = [...remoteTasks];
+            let conflictCount = 0;
 
-            for (const local of cachedTasks) {
-                if (!remoteIds.has(local.id)) {
-                    // Task exists locally but not in Drive — might be offline create or deleted remotely
-                    const stillLocal = await cacheStore.getTask(local.id);
-                    if (stillLocal) {
-                        mergedTasks.push(local);
+            for (const change of changes) {
+                if (change.removed) {
+                    const idx = mergedTasks.findIndex(t => t.googleDriveFileId === change.fileId);
+                    if (idx !== -1) mergedTasks.splice(idx, 1);
+                    mergedIds.delete(change.fileId);
+                    continue;
+                }
+
+                try {
+                    const remoteContent = await googleDriveService.readFile(change.fileId);
+                    const remoteTask: Task = { ...remoteContent, id: change.fileId, googleDriveFileId: change.fileId };
+
+                    const localTask = cachedMap.get(change.fileId);
+                    if (localTask) {
+                        const conflict = await conflictResolver.checkConflict(localTask, remoteTask);
+                        if (conflict) {
+                            conflictCount++;
+                            this.telemetry.totalConflicts++;
+                            const resolved = await conflictResolver.resolve(conflict);
+                            if (resolved) {
+                                if (!mergedIds.has(change.fileId)) {
+                                    mergedTasks.push(resolved);
+                                    mergedIds.add(change.fileId);
+                                } else {
+                                    const idx = mergedTasks.findIndex(t => t.id === change.fileId);
+                                    mergedTasks[idx] = resolved;
+                                }
+                            }
+                            continue;
+                        }
                     }
+
+                    if (!mergedIds.has(change.fileId)) {
+                        mergedTasks.push(remoteTask);
+                        mergedIds.add(change.fileId);
+                    } else {
+                        const idx = mergedTasks.findIndex(t => t.id === change.fileId);
+                        mergedTasks[idx] = remoteTask;
+                    }
+                } catch (e) {
+                    logger.warn('Failed to read changed file', { fileId: change.fileId }, e);
                 }
             }
 
-            // Write to cache
             await cacheStore.putTasks(mergedTasks);
+            await changeTracker.savePageToken(newPageToken);
+
+            this.telemetry.totalSyncs++;
+            const duration = performance.now() - startTime;
+            this.telemetry.syncDurations.push(duration);
+            if (this.telemetry.syncDurations.length > 100) this.telemetry.syncDurations.shift();
 
             this.setState({
                 state: 'idle',
                 lastSyncAt: new Date().toISOString(),
                 pendingMutations: await syncQueue.pendingCount(),
+                conflicts: conflictCount,
             });
 
-            logger.info('Sync completed', { taskCount: mergedTasks.length });
+            logger.info('Sync completed', {
+                taskCount: mergedTasks.length,
+                changesProcessed: changes.length,
+                conflicts: conflictCount,
+                durationMs: Math.round(duration),
+            });
         } catch (error) {
             logger.error('Sync failed', undefined, error);
             this.setState({
