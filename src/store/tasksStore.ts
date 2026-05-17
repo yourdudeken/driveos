@@ -129,6 +129,11 @@ export const useTasksStore = create<TasksState>()(
                     }
                 } catch (error) {
                     logger.error('Failed to update task status', { taskId: id }, error);
+                    const task = useTasksStore.getState().tasks.find(t => t.id === id);
+                    if (task) {
+                        await cacheStore.putTask(task);
+                        await syncEngine.enqueueOfflineUpdate(task);
+                    }
                 }
             },
 

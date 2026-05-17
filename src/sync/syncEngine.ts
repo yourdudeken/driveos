@@ -4,6 +4,7 @@ import { cacheStore } from './cacheStore';
 import { syncQueue } from './syncQueue';
 import { changeTracker } from './changeTracker';
 import { conflictResolver } from './conflictResolver';
+import { withRetry } from '@/lib/retry';
 import type { Task } from '@/types';
 
 type SyncListener = (status: SyncStatus) => void;
@@ -28,6 +29,7 @@ class SyncEngine {
     private listeners = new Set<SyncListener>();
     private pollTimer: ReturnType<typeof setInterval> | null = null;
     private isRunning = false;
+    private onlineHandler: (() => void) | null = null;
     private telemetry: SyncTelemetry = { totalSyncs: 0, totalConflicts: 0, totalBytesRead: 0, syncDurations: [] };
 
     getStatus(): SyncStatus {
@@ -62,10 +64,11 @@ class SyncEngine {
         await this.processQueue();
         await this.sync();
 
-        window.addEventListener('online', () => {
+        this.onlineHandler = () => {
             logger.info('Back online — running sync');
             this.sync();
-        });
+        };
+        window.addEventListener('online', this.onlineHandler);
 
         this.pollTimer = setInterval(() => this.sync(), pollIntervalMs);
     }
@@ -75,6 +78,10 @@ class SyncEngine {
         if (this.pollTimer) {
             clearInterval(this.pollTimer);
             this.pollTimer = null;
+        }
+        if (this.onlineHandler) {
+            window.removeEventListener('online', this.onlineHandler);
+            this.onlineHandler = null;
         }
         this.setState({ state: 'idle' });
         logger.info('Sync engine stopped');
@@ -120,7 +127,7 @@ class SyncEngine {
                 }
 
                 try {
-                    const remoteContent = await googleDriveService.readFile(change.fileId);
+                    const remoteContent = await withRetry(() => googleDriveService.readFile(change.fileId));
                     const remoteTask: Task = { ...remoteContent, id: change.fileId, googleDriveFileId: change.fileId };
 
                     const localTask = cachedMap.get(change.fileId);

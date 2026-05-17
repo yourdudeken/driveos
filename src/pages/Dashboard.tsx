@@ -9,6 +9,7 @@ import { Footer } from '@/components/Footer';
 import { SyncStatus } from '@/components/SyncStatus';
 import type { Task } from '@/types';
 import { useAISuggestions } from '@/hooks/useAISuggestions';
+import { searchIndex } from '@/sync/searchIndex';
 import { AISuggestions } from '@/components/AISuggestions';
 import { useSyncEngine } from '@/hooks/useSyncEngine';
 
@@ -27,17 +28,11 @@ export default function Dashboard() {
 
     // Rebuild search index when tasks change
     useEffect(() => {
-        import('@/sync/searchIndex').then(({ searchIndex }) => searchIndex.rebuild(tasks));
+        searchIndex.rebuild(tasks);
     }, [tasks]);
 
     useEffect(() => {
         hydrateFromCache().then(() => fetchTasks());
-
-        const interval = setInterval(() => {
-            fetchTasks(true);
-        }, 60000);
-
-        return () => clearInterval(interval);
     }, [fetchTasks, hydrateFromCache]);
 
     const categories = useMemo(() => {

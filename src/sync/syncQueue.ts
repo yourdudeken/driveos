@@ -1,4 +1,5 @@
 import { logger } from '@/lib/logger';
+import { openDB } from './cacheStore';
 
 interface SyncMutation {
     id?: number;
@@ -11,16 +12,7 @@ interface SyncMutation {
     retryCount: number;
 }
 
-const DB_NAME = 'cloudtodo';
 const STORE = 'queue';
-
-function openDB(): Promise<IDBDatabase> {
-    return new Promise((resolve, reject) => {
-        const request = indexedDB.open(DB_NAME, 1);
-        request.onsuccess = () => resolve(request.result);
-        request.onerror = () => reject(request.error);
-    });
-}
 
 export const syncQueue = {
     async enqueue(mutation: Omit<SyncMutation, 'id' | 'createdAt' | 'status' | 'retryCount'>): Promise<void> {
