@@ -8,7 +8,7 @@ const SCOPES = 'https://www.googleapis.com/auth/drive.file https://www.googleapi
 const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
 export const useGoogleAuth = () => {
-    const { setUser, logout: storeLogout } = useAuthStore();
+    const { setUser, logout: storeLogout, isTokenExpired } = useAuthStore();
     const [isLoading, setIsLoading] = useState(false);
     const [tokenClient, setTokenClient] = useState<{ requestAccessToken: () => void } | null>(null);
 
@@ -21,7 +21,6 @@ export const useGoogleAuth = () => {
                     if (tokenResponse && tokenResponse.access_token) {
                         setIsLoading(true);
                         try {
-                            // 1. Get User Info
                             const userInfoResponse = await axios.get(
                                 'https://www.googleapis.com/oauth2/v3/userinfo',
                                 {
@@ -38,9 +37,8 @@ export const useGoogleAuth = () => {
                                 accessToken: tokenResponse.access_token,
                             };
 
-                            setUser(user);
+                            setUser(user, tokenResponse.expires_in);
 
-                            // 2. Ensure Folder Structure
                             await googleDriveService.ensureFolderStructure(tokenResponse.access_token);
 
                         } catch (error) {
@@ -56,16 +54,44 @@ export const useGoogleAuth = () => {
     }, [setUser]);
 
     const login = useCallback(() => {
-        if (tokenClient) {
+        if (isTokenExpired() && window.google) {
+            const client = window.google.accounts.oauth2.initTokenClient({
+                client_id: CLIENT_ID,
+                scope: SCOPES,
+                callback: async (tokenResponse: GoogleTokenResponse) => {
+                    if (tokenResponse && tokenResponse.access_token) {
+                        setIsLoading(true);
+                        try {
+                            const userInfoResponse = await axios.get(
+                                'https://www.googleapis.com/oauth2/v3/userinfo',
+                                { headers: { Authorization: `Bearer ${tokenResponse.access_token}` } }
+                            );
+                            const profile = userInfoResponse.data;
+                            setUser({
+                                id: profile.sub,
+                                name: profile.name,
+                                email: profile.email,
+                                picture: profile.picture,
+                                accessToken: tokenResponse.access_token,
+                            }, tokenResponse.expires_in);
+                        } catch (error) {
+                            console.error('Re-auth failed', error);
+                        } finally {
+                            setIsLoading(false);
+                        }
+                    }
+                },
+            });
+            client.requestAccessToken();
+        } else if (tokenClient) {
             tokenClient.requestAccessToken();
         } else {
             console.error('Google Token Client not initialized');
         }
-    }, [tokenClient]);
+    }, [tokenClient, isTokenExpired, setUser]);
 
     const logout = useCallback(() => {
         storeLogout();
-        // Optional: Revoke token
     }, [storeLogout]);
 
     return { login, logout, isLoading };
