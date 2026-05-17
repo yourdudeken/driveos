@@ -1,110 +1,162 @@
-# CloudTodo - Google Drive-Based Task Management
+# CloudTodo — Google Drive-Based Task Management
 
 ## Overview
 
-CloudTodo is a privacy-first task management app that leverages your personal Google Drive as a secure, decentralized backend. It eliminates the need for third-party databases, providing you with 100% ownership, portability, and control over your data.
+CloudTodo is a privacy-first, production-grade task management application that uses your personal Google Drive as the sole backend. Zero third-party databases, zero servers, zero tracking — your data lives in your Drive and nowhere else.
 
 ---
 
 ## Key Features
 
+### Offline-First Sync Engine
+- **Incremental Sync**: Drive Changes API detects only what changed — ~90% fewer API calls vs. full re-fetch every cycle.
+- **IndexedDB Cache**: Unlimited structured offline storage (4 object stores: tasks, sync, queue, blobs).
+- **Offline Mutation Queue**: Create, update, and delete tasks while offline. Changes replay automatically when connectivity returns.
+- **Conflict Resolution**: Last-Write-Wins with per-task metadata tracking and conflict event logging.
+- **60-Second Polling**: Background sync keeps local state fresh without quota exhaustion.
+
 ### User-Owned Storage
-- **Decentralized Storage**: All tasks are stored as JSON files within your own Google Drive storage space.
-- **Native Attachments**: High-speed handling of images, videos, documents, and audio recordings, managed in a structured folder hierarchy.
-- **Zero-Server Footprint**: Your data never touches an external database. It moves directly between your browser and Google's global infrastructure.
+- **Decentralized Storage**: Tasks stored as JSON files in your own Google Drive.
+- **Native Attachments**: Images, videos, documents in per-task folders under `CLOUDTODO/attachments/`.
+- **Zero-Server Footprint**: Data moves directly between browser and Google's infrastructure — no intermediate backend.
 
 ### AI-Powered Suggestions
-- **Smart Completions**: OpenAI-powered suggestions for task titles, descriptions, categories, and search — debounced and served via `gpt-4o-mini`.
+- **Smart Completions**: OpenAI `gpt-4o-mini` suggestions for task titles, descriptions, categories, and search (500ms debounced).
 
 ### Premium UI/UX
-- **Rich Aesthetics**: A professional dark-mode interface with glassmorphism, smooth transitions, and vibrant accents.
-- **Multi-View System**: Pivot between a high-efficiency Grid View and a tactical Kanban Board.
-- **Visual Intelligence**: Dedicated markers for Pinned and Starred tasks.
+- **Dark-Mode Interface**: Glassmorphism, smooth transitions, vibrant accents.
+- **Multi-View**: Grid View and Kanban Board with category filtering.
+- **Code-Split**: 23 lazy-loaded chunks — Dashboard loads on demand (93 KB gzip: 27 KB).
 
-### Integrated Cloud Assets
-- **Atomic Categorization**: Attachments are organized per-task, ensuring all related media stays within its own context.
-- **Secure Media Pipeline**: Images and media are fetched as binary blobs and rendered securely, bypassing public URL exposure.
-- **Recursive Cleanup**: Deleting a task automatically purges its associated attachments folder, maintaining a clean Drive environment.
+### Production Infrastructure
+- **Observability**: Structured logger (4 levels, session IDs), error boundaries, toast notifications.
+- **Resilience**: Exponential backoff retry wrapper for all Drive API calls (max 3 attempts).
+- **Security**: CSP headers, nginx security headers, token expiry tracking with auto re-auth.
+- **Containerized**: Docker multi-stage build (Node → nginx), docker-compose, CI/CD pipeline.
 
 ---
 
 ## Architecture
 
-### Folder Structure in your Drive
+### Drive Folder Structure
 ```
 User's Google Drive
-└── CLOUDTODO/                    # Root Application Hub
-    ├── tasks/                    # Task Metadata Registry
-    │   ├── task-1712345678.json  # Task JSON Metadata
-    │   └── task-1712345679.json
-    └── attachments/              # Binary Asset Storage
-        ├── <taskId>/             # Dedicated folder for a specific task
-        │   ├── image.jpg
-        │   └── document.pdf
+└── CLOUDTODO/
+    ├── tasks/                    # JSON task files
+    └── attachments/              # Per-task binary folders
+```
+
+### Sync Architecture
+```
+src/sync/
+├── syncEngine.ts         # Orchestrator: change detection → pull → merge → persist
+├── changeTracker.ts      # Drive Changes API wrapper (incremental, pageToken persisted)
+├── conflictResolver.ts   # LWW conflict detection with event logging
+├── syncQueue.ts          # Offline mutation queue (IndexedDB-backed)
+├── cacheStore.ts         # IndexedDB layer (4 object stores, shared DB connection)
+└── searchIndex.ts        # In-memory full-text search (multi-term, case-insensitive)
 ```
 
 ### Data Flow
-1. **Authentication**: Secure handshake via Google OAuth 2.0 with minimal scope requirements.
-2. **Storage**: Tasks saved as JSON files to your Google Drive.
-3. **Attachments**: Files uploaded via Multipart Upload to per-task folders.
-4. **Sync**: Local state syncs with Drive every 30 seconds.
+1. **Auth**: Google OAuth 2.0 (GIS) — token expiry tracked, re-auth triggered automatically.
+2. **Local Write**: Optimistic UI update → IndexedDB cache → offline queue (if offline).
+3. **Sync**: Drive Changes API detects changes → only reads modified files → resolves conflicts → writes to IndexedDB + Zustand.
+4. **Hydration**: On load, reads IndexedDB first (instant), then syncs with Drive (background).
 
 ---
 
 ## Tech Stack
 
-- **Frontend**: React 19 (TypeScript)
-- **Build System**: Vite 7
-- **State Management**: Zustand
-- **Styling**: Tailwind CSS 4 (Custom Design System)
-- **Icons**: Lucide React
-- **Networking**: Axios (Direct Google API Integration)
-- **AI**: OpenAI API (gpt-4o-mini)
-- **Auth**: OAuth 2.0 Scoped Access
+| Layer | Technology |
+|-------|-----------|
+| Frontend | React 19 (TypeScript), `verbatimModuleSyntax` |
+| Build | Vite 7, TypeScript project references (`tsc -b`) |
+| State | Zustand with `persist` middleware |
+| Styling | Tailwind CSS v4 (CSS-based config, `@theme` block) |
+| Icons | Lucide React |
+| Networking | Axios (Google Drive API v3, OpenAI API) |
+| AI | OpenAI `gpt-4o-mini` |
+| Auth | Google Identity Services (GIS) OAuth 2.0, `drive.file` scope |
+| Sync | Drive Changes API, IndexedDB, offline queue |
+| Testing | Vitest + jsdom (15 tests, 3 suites) |
+| CI/CD | GitHub Actions, Docker, Docker Compose |
+| Serving | nginx (SPA routing, CSP, security headers, gzip) |
+| Observability | Structured logger (`DEBUG`/`INFO`/`WARN`/`ERROR` levels) |
 
 ---
 
 ## Getting Started
 
 ### Prerequisites
-- Node.js 20 or higher
-- A Google Cloud Project with the Google Drive API enabled
-- An OpenAI API key
+- Node.js 20+
+- Google Cloud Project with Drive API enabled
+- OpenAI API key
 
 ### 1. Configure Google Cloud
-1. Enable the Google Drive API in the Google Cloud Console.
-2. Create OAuth 2.0 Credentials for a Web Application.
-3. Add `http://localhost:5173` to the Authorized JavaScript origins.
+1. Enable Google Drive API in the Google Cloud Console.
+2. Create OAuth 2.0 Web Client credentials.
+3. Add `http://localhost:5173` to Authorized JavaScript origins.
 
 ### 2. Local Setup
 ```bash
-# Clone the repository
 git clone https://github.com/yourdudeken/cloudtodo.git
 cd cloudtodo
-
-# Install dependencies
 npm install
-
-# Configure environment
-echo "VITE_GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com" > .env
-echo "VITE_OPENAI_API_KEY=sk-your-openai-api-key" >> .env
+cp .env.example .env
+# Edit .env with your VITE_GOOGLE_CLIENT_ID and VITE_OPENAI_API_KEY
 ```
 
-### 3. Execution
+### 3. Development
 ```bash
 npm run dev
 ```
 
----
-
-## Privacy and Security Policy
-
-### Data Sovereignty
-Your productivity data is a private conversation between you and your storage provider. CloudTodo does not have a backend, tracking pixels, or an analytics engine.
-
-### Scoped Access
-The application requests the `drive.file` scope. This means it can only access files it created or those you explicitly opened with it. It cannot read your other private documents on Google Drive.
+### 4. Production Build
+```bash
+npm run build
+npm run preview        # Serve locally via Vite
+# or
+docker compose up      # Full production stack via nginx
+```
 
 ---
 
-**Efficiency without compromise.**
+## Available Scripts
+
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Start dev server at `localhost:5173` |
+| `npm run build` | `tsc -b` then `vite build` (23 chunks) |
+| `npm run lint` | ESLint flat config on all `**/*.{ts,tsx}` |
+| `npm run preview` | Serve production build locally |
+| `npm test` | Run Vitest (15 tests, 3 suites) |
+| `docker compose up` | Production Docker build via nginx |
+
+---
+
+## Privacy & Security
+
+- **Data Sovereignty**: No backend, no tracking, no analytics — your data stays in your Google Drive.
+- **Scoped Access**: Only `drive.file` scope — CloudTodo cannot read your private Drive documents.
+- **CSP Enforced**: Content-Security-Policy meta tag + nginx headers restrict script sources and inline execution.
+- **Token Security**: OAuth token expiry tracked; re-auth triggered 60s before expiry.
+- **Input Safety**: All user content rendered safely; no XSS vectors via CSP.
+
+---
+
+## Documentation
+
+| File | Content |
+|------|---------|
+| `docs/architecture.md` | Module boundaries, data flow, storage layers |
+| `docs/sync-engine.md` | Sync engine components, polling, offline behavior, retry policy |
+| `docs/security.md` | CSP, token security, hardening checklist |
+| `docs/deployment.md` | Vercel, Docker, CI/CD instructions |
+| `AGENTS.md` | Onboarding guide for AI coding agents |
+| `plan.md` | Full architecture review and implementation roadmap |
+
+---
+
+## License
+
+MIT
