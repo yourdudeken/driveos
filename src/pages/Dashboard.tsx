@@ -6,13 +6,15 @@ import { CreateTaskModal } from '@/components/CreateTaskModal';
 import { TaskDetailsModal } from '@/components/TaskDetailsModal';
 import { KanbanBoard } from '@/components/KanbanBoard';
 import { Footer } from '@/components/Footer';
+import { SyncStatus } from '@/components/SyncStatus';
 import type { Task } from '@/types';
 import { useAISuggestions } from '@/hooks/useAISuggestions';
 import { AISuggestions } from '@/components/AISuggestions';
+import { useSyncEngine } from '@/hooks/useSyncEngine';
 
 export default function Dashboard() {
     const { user, logout } = useAuthStore();
-    const { tasks, fetchTasks, isLoading, viewMode, setViewMode, selectedCategory, setSelectedCategory } = useTasksStore();
+    const { tasks, fetchTasks, hydrateFromCache, isLoading, viewMode, setViewMode, selectedCategory, setSelectedCategory } = useTasksStore();
     const [selectedTask, setSelectedTask] = useState<Task | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -21,16 +23,17 @@ export default function Dashboard() {
 
     const searchAI = useAISuggestions('search', searchQuery);
 
-    useEffect(() => {
-        fetchTasks();
+    useSyncEngine();
 
-        // Collaborative Polling: Sync tasks in background every 30s
+    useEffect(() => {
+        hydrateFromCache().then(() => fetchTasks());
+
         const interval = setInterval(() => {
             fetchTasks(true);
-        }, 30000);
+        }, 60000);
 
         return () => clearInterval(interval);
-    }, [fetchTasks]);
+    }, [fetchTasks, hydrateFromCache]);
 
     const categories = useMemo(() => {
         const cats = new Set<string>();
@@ -175,6 +178,7 @@ export default function Dashboard() {
                             <Columns className="w-5 h-5" />
                         </button>
                     </div>
+                    <SyncStatus />
                 </header>
 
                 {/* Content */}
