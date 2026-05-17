@@ -5,7 +5,7 @@ const DB_VERSION = 1;
 
 let db: IDBDatabase | null = null;
 
-function openDB(): Promise<IDBDatabase> {
+export function openDB(): Promise<IDBDatabase> {
     return new Promise((resolve, reject) => {
         if (db) return resolve(db);
 

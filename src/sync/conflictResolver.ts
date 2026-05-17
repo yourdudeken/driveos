@@ -1,4 +1,5 @@
 import { logger } from '@/lib/logger';
+import { cacheStore } from './cacheStore';
 import type { Task } from '@/types';
 
 export const ConflictReason = {
@@ -28,7 +29,6 @@ const META_PREFIX = 'task_meta_';
 
 async function getTaskMeta(taskId: string): Promise<StoredMeta | null> {
     try {
-        const { cacheStore } = await import('./cacheStore');
         const val = await cacheStore.getSyncMeta(META_PREFIX + taskId);
         return val ? (val as StoredMeta) : null;
     } catch {
@@ -37,7 +37,6 @@ async function getTaskMeta(taskId: string): Promise<StoredMeta | null> {
 }
 
 async function setTaskMeta(taskId: string, meta: StoredMeta): Promise<void> {
-    const { cacheStore } = await import('./cacheStore');
     await cacheStore.setSyncMeta(META_PREFIX + taskId, meta);
 }
 
@@ -115,7 +114,6 @@ export const conflictResolver = {
 
     async getConflictLog(): Promise<ConflictEvent[]> {
         try {
-            const { cacheStore } = await import('./cacheStore');
             const log = await cacheStore.getSyncMeta('conflict_log');
             return (log as ConflictEvent[]) || [];
         } catch {
