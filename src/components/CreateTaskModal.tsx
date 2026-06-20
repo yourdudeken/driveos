@@ -12,11 +12,12 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Plus, Loader2, Paperclip, X, Image, Music, Video, File as FileIcon, Star, Pin } from 'lucide-react';
+import { Plus, Loader2, Paperclip, X, Image, Music, Video, File as FileIcon, Star, Pin, Sparkles, ChevronDown } from 'lucide-react';
 import type { PriorityLevel, Attachments } from '@/types';
 import { googleDriveService } from '@/lib/googleDrive';
 import { useAISuggestions } from '@/hooks/useAISuggestions';
 import { AISuggestions } from '@/components/AISuggestions';
+import { generateTaskFromPrompt } from '@/lib/openrouter';
 
 export function CreateTaskModal() {
     const [open, setOpen] = useState(false);
@@ -35,6 +36,12 @@ export function CreateTaskModal() {
 
     const [files, setFiles] = useState<File[]>([]);
     const [isUploading, setIsUploading] = useState(false);
+
+    // AI Generate mode state
+    const [aiMode, setAiMode] = useState(false);
+    const [aiPrompt, setAiPrompt] = useState('');
+    const [isGenerating, setIsGenerating] = useState(false);
+    const [aiError, setAiError] = useState('');
 
     const titleAI = useAISuggestions('task title', formData.title);
     const descAI = useAISuggestions('description', formData.description);
@@ -55,6 +62,31 @@ export function CreateTaskModal() {
         if (type.startsWith('video/')) return <Video className="w-4 h-4 text-purple-400" />;
         if (type.startsWith('audio/')) return <Music className="w-4 h-4 text-indigo-400" />;
         return <FileIcon className="w-4 h-4 text-blue-400" />;
+    };
+
+    /** Send the free-text prompt to AI and pre-fill all form fields. */
+    const handleAiGenerate = async () => {
+        if (!aiPrompt.trim()) return;
+        setIsGenerating(true);
+        setAiError('');
+        try {
+            const task = await generateTaskFromPrompt(aiPrompt);
+            setFormData(prev => ({
+                ...prev,
+                title: task.title,
+                description: task.description,
+                priority: task.priority,
+                categories: task.categories,
+                dueDate: task.dueDate,
+            }));
+            // Collapse AI panel so user sees the filled form
+            setAiMode(false);
+        } catch (err) {
+            console.error('AI generation failed:', err);
+            setAiError('Failed to generate. Check VITE_OPENROUTER_API_KEY or try again.');
+        } finally {
+            setIsGenerating(false);
+        }
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -115,6 +147,8 @@ export function CreateTaskModal() {
                 isPinned: false,
             });
             setFiles([]);
+            setAiPrompt('');
+            setAiMode(false);
         } catch (error) {
             console.error('Task creation failed:', error);
         } finally {
@@ -132,15 +166,73 @@ export function CreateTaskModal() {
             </DialogTrigger>
             <DialogContent className="sm:max-w-[425px] bg-black/90 backdrop-blur-3xl border-white/10 text-white rounded-[2rem] shadow-2xl">
                 <DialogHeader>
-                    <div className="w-12 h-12 bg-indigo-600/20 rounded-2xl flex items-center justify-center mb-4 border border-indigo-500/20">
-                        <Plus className="w-6 h-6 text-indigo-400" />
+                    <div className="flex items-start justify-between">
+                        <div className="w-12 h-12 bg-indigo-600/20 rounded-2xl flex items-center justify-center mb-4 border border-indigo-500/20">
+                            <Plus className="w-6 h-6 text-indigo-400" />
+                        </div>
+                        {/* AI Toggle Button */}
+                        <button
+                            type="button"
+                            onClick={() => { setAiMode(m => !m); setAiError(''); }}
+                            className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-bold uppercase tracking-widest transition-all ${
+                                aiMode
+                                    ? 'bg-violet-500/20 border-violet-500/40 text-violet-300'
+                                    : 'bg-white/5 border-white/10 text-gray-400 hover:text-violet-300 hover:border-violet-500/30'
+                            }`}
+                            title="Let AI draft this task for you"
+                        >
+                            <Sparkles className="w-3.5 h-3.5" />
+                            AI Draft
+                            <ChevronDown className={`w-3 h-3 transition-transform ${aiMode ? 'rotate-180' : ''}`} />
+                        </button>
                     </div>
                     <DialogTitle className="text-2xl font-bold tracking-tight">Create New Task</DialogTitle>
                     <DialogDescription className="text-gray-500 font-medium">
                         Stored securely in your DriveOS folder on Google Drive.
                     </DialogDescription>
                 </DialogHeader>
-                <form onSubmit={handleSubmit} className="grid gap-6 py-4 overflow-y-auto max-h-[80vh] px-1">
+
+                {/* ── AI Generation Panel ── */}
+                {aiMode && (
+                    <div className="mx-1 mb-2 p-4 rounded-2xl bg-violet-500/10 border border-violet-500/20 space-y-3">
+                        <p className="text-xs text-violet-300 font-semibold uppercase tracking-widest flex items-center gap-1.5">
+                            <Sparkles className="w-3.5 h-3.5" />
+                            Describe your task in plain language
+                        </p>
+                        <textarea
+                            className="w-full min-h-[80px] rounded-xl bg-black/40 border border-violet-500/20 px-3 py-2.5 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-violet-500/30 resize-none"
+                            placeholder='e.g. "Review Q3 marketing report by Friday, high priority, tag it as Work and Urgent"'
+                            value={aiPrompt}
+                            onChange={e => setAiPrompt(e.target.value)}
+                            onKeyDown={e => {
+                                if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) handleAiGenerate();
+                            }}
+                        />
+                        {aiError && (
+                            <p className="text-xs text-red-400">{aiError}</p>
+                        )}
+                        <button
+                            type="button"
+                            onClick={handleAiGenerate}
+                            disabled={isGenerating || !aiPrompt.trim()}
+                            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-700 text-white font-bold text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            {isGenerating ? (
+                                <>
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                    Generating…
+                                </>
+                            ) : (
+                                <>
+                                    <Sparkles className="w-4 h-4" />
+                                    Generate Task  <span className="opacity-50 text-xs font-normal ml-1">⌘↵</span>
+                                </>
+                            )}
+                        </button>
+                    </div>
+                )}
+
+                <form onSubmit={handleSubmit} className="grid gap-6 py-4 overflow-y-auto max-h-[60vh] px-1">
                     <div className="grid gap-2 relative">
                         <Label htmlFor="title" className="text-xs font-bold uppercase tracking-widest text-gray-500 ml-1">Task Title</Label>
                         <Input
