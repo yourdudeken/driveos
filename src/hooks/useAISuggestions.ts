@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { getSuggestions } from '@/lib/openai';
+import { getSuggestions } from '@/lib/openrouter';
 
 export function useAISuggestions(field: string, value: string) {
     const [suggestions, setSuggestions] = useState<string[]>([]);
