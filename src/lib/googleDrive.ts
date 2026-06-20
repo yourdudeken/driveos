@@ -20,13 +20,36 @@ interface DriveFile {
 }
 
 const getHeaders = (contentType: string = 'application/json', token?: string) => {
-    const accessToken = token || useAuthStore.getState().user?.accessToken;
+    const store = useAuthStore.getState();
+
+    // Guard: if the stored token is expired, force logout immediately
+    // so the user is sent to /login rather than getting a silent 403.
+    if (!token && store.isTokenExpired()) {
+        store.logout();
+        throw new Error('SESSION_EXPIRED');
+    }
+
+    const accessToken = token || store.user?.accessToken;
     if (!accessToken) throw new Error('Not authenticated');
     return {
         Authorization: `Bearer ${accessToken}`,
         'Content-Type': contentType,
     };
 };
+
+// Intercept 401/403 from Google Drive and force logout so the
+// ProtectedRoute redirects the user back to /login.
+axios.interceptors.response.use(
+    (response) => response,
+    (error) => {
+        const status = error?.response?.status;
+        if ((status === 401 || status === 403) &&
+            error?.config?.url?.includes('googleapis.com')) {
+            useAuthStore.getState().logout();
+        }
+        return Promise.reject(error);
+    }
+);
 
 export const googleDriveService = {
     async ensureFolderStructure(token?: string) {

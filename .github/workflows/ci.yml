@@ -113,5 +113,5 @@ jobs:
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/driveos:${{ needs.version.outputs.new_tag }}
             ${{ secrets.DOCKERHUB_USERNAME }}/driveos:latest
-            ghcr.io/${{ github.repository }}/driveos:${{ needs.version.outputs.new_tag }}
-            ghcr.io/${{ github.repository }}/driveos:latest
+            ghcr.io/${{ github.repository_owner }}/driveos:${{ needs.version.outputs.new_tag }}
+            ghcr.io/${{ github.repository_owner }}/driveos:latest

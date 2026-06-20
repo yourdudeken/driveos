@@ -42,15 +42,17 @@ export const useAuthStore = create<AuthState>()(
         {
             name: 'auth-storage',
             partialize: (state) => ({
+                // NOTE: accessToken is intentionally NOT persisted — it expires in ~1h.
+                // On next session the user must re-authenticate via Google OAuth.
                 user: state.user?.id ? {
                     id: state.user.id,
                     name: state.user.name,
                     email: state.user.email,
                     picture: state.user.picture,
-                    accessToken: state.user.accessToken,
+                    // accessToken intentionally omitted
                 } : null,
-                isAuthenticated: state.isAuthenticated,
-                tokenExpiresAt: state.tokenExpiresAt,
+                isAuthenticated: false, // always start unauthenticated; re-auth on load
+                tokenExpiresAt: null,
             }),
         }
     )
