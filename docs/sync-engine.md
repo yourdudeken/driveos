@@ -21,7 +21,7 @@ IndexedDB wrapper with typed methods:
 - `deleteTask(id)` — remove from cache
 - `getSyncMeta(key)` / `setSyncMeta(key, value)` — persist sync state
 
-Database: `cloudtodo`
+Database: `driveos`
 - `tasks` — object store keyed by `id`, indexes on `status`, `updatedDate`
 - `sync` — key-value store for `pageToken` etc.
 - `queue` — pending mutations, auto-increment keyed, index on `status`

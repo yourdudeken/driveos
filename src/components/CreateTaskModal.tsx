@@ -137,7 +137,7 @@ export function CreateTaskModal() {
                     </div>
                     <DialogTitle className="text-2xl font-bold tracking-tight">Create New Task</DialogTitle>
                     <DialogDescription className="text-gray-500 font-medium">
-                        Stored securely in your CloudTodo folder on Google Drive.
+                        Stored securely in your DriveOS folder on Google Drive.
                     </DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="grid gap-6 py-4 overflow-y-auto max-h-[80vh] px-1">
@@ -204,7 +204,7 @@ export function CreateTaskModal() {
                             <Star className={`w-3.5 h-3.5 ${formData.isStarred ? 'fill-current' : ''}`} />
                             <span className="text-[10px] font-black uppercase tracking-widest">Star</span>
                         </button>
-                        </div>
+                    </div>
                     <div className="grid gap-2">
                         <Label className="text-xs font-bold uppercase tracking-widest text-gray-500 ml-1">Priority Level</Label>
                         <div className="grid grid-cols-3 gap-3">

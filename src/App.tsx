@@ -16,6 +16,7 @@ const Features = lazy(() => import('@/pages/info/Features'));
 const HowItWorks = lazy(() => import('@/pages/info/HowItWorks'));
 const Product = lazy(() => import('@/pages/info/Product'));
 const Company = lazy(() => import('@/pages/info/Company'));
+const Signup = lazy(() => import('@/pages/Signup'));
 
 function PageLoader() {
   return (
@@ -35,6 +36,7 @@ function App() {
             <Routes>
               <Route path="/" element={<Landing />} />
               <Route path="/login" element={<Login />} />
+              <Route path="/signup" element={<Signup />} />
               <Route path="/privacy" element={<Privacy />} />
               <Route path="/terms" element={<Terms />} />
               <Route path="/desktop" element={<Desktop />} />

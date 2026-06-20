@@ -1,9 +1,9 @@
 import { useGoogleAuth } from '@/hooks/useGoogleAuth';
 import { useAuthStore } from '@/store/authStore';
 import { Navigate, Link } from 'react-router-dom';
-import { Loader2, Shield, Lock } from 'lucide-react';
+import { Loader2, Shield, Zap, Cloud } from 'lucide-react';
 
-export default function Login() {
+export default function Signup() {
     const { login, isLoading } = useGoogleAuth();
     const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
@@ -15,9 +15,9 @@ export default function Login() {
         <div className="min-h-screen w-full flex flex-col bg-black overflow-x-hidden relative font-sans">
             {/* Background Effects */}
             <div className="fixed inset-0 z-0">
-                <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-indigo-600/20 rounded-full mix-blend-screen filter blur-[120px] animate-pulse"></div>
-                <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-purple-600/20 rounded-full mix-blend-screen filter blur-[120px] animate-pulse delay-700"></div>
-                <div className="absolute top-[40%] right-[20%] w-[30%] h-[30%] bg-blue-600/10 rounded-full mix-blend-screen filter blur-[100px] animate-pulse delay-1000"></div>
+                <div className="absolute top-[-10%] right-[-10%] w-[50%] h-[50%] bg-purple-600/20 rounded-full mix-blend-screen filter blur-[120px] animate-pulse"></div>
+                <div className="absolute bottom-[-10%] left-[-10%] w-[50%] h-[50%] bg-indigo-600/20 rounded-full mix-blend-screen filter blur-[120px] animate-pulse delay-700"></div>
+                <div className="absolute top-[30%] left-[20%] w-[30%] h-[30%] bg-pink-600/10 rounded-full mix-blend-screen filter blur-[100px] animate-pulse delay-1000"></div>
             </div>
 
             <div className="flex-1 flex items-center justify-center py-16 relative z-10">
@@ -33,22 +33,36 @@ export default function Login() {
 
                     {/* Auth Card */}
                     <div className="bg-white/5 backdrop-blur-2xl border border-white/10 rounded-[2.5rem] p-8 md:p-10 shadow-2xl relative overflow-hidden">
-                        {/* Top accent line */}
-                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-indigo-500 to-transparent opacity-60"></div>
+                        {/* Top accent line - purple for signup */}
+                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-purple-500 to-transparent opacity-60"></div>
 
                         <div className="text-center mb-10">
-                            <h1 className="text-3xl font-bold text-white mb-3">Welcome back</h1>
-                            <p className="text-gray-400">Sign in to access your tasks on Google Drive.</p>
+                            <h1 className="text-3xl font-bold text-white mb-3">Create your account</h1>
+                            <p className="text-gray-400">Join thousands of users who own their data.</p>
                         </div>
 
-                        {/* Google Sign In */}
+                        {/* Value props before signup CTA */}
+                        <div className="grid grid-cols-3 gap-3 mb-8">
+                            {[
+                                { icon: <Shield className="w-5 h-5 text-indigo-400" />, label: 'Zero-Knowledge' },
+                                { icon: <Cloud className="w-5 h-5 text-purple-400" />, label: 'Drive Sync' },
+                                { icon: <Zap className="w-5 h-5 text-pink-400" />, label: 'Instant Setup' },
+                            ].map((item) => (
+                                <div key={item.label} className="flex flex-col items-center gap-2 p-3 rounded-2xl bg-white/[0.03] border border-white/5">
+                                    {item.icon}
+                                    <span className="text-[10px] text-gray-500 uppercase tracking-widest font-bold text-center">{item.label}</span>
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Google Sign Up */}
                         <button
                             onClick={login}
                             disabled={isLoading}
-                            className="w-full group relative flex items-center justify-center gap-3 py-4 px-6 bg-white text-black rounded-2xl font-bold text-lg hover:bg-gray-100 active:scale-[0.98] transition-all duration-200 shadow-xl disabled:opacity-70 disabled:cursor-not-allowed overflow-hidden"
+                            className="w-full group relative flex items-center justify-center gap-3 py-4 px-6 bg-white text-black rounded-2xl font-bold text-lg hover:bg-gray-100 active:scale-[0.98] transition-all duration-200 shadow-xl disabled:opacity-70 disabled:cursor-not-allowed"
                         >
                             {isLoading ? (
-                                <Loader2 className="w-6 h-6 animate-spin text-indigo-600" />
+                                <Loader2 className="w-6 h-6 animate-spin text-purple-600" />
                             ) : (
                                 <>
                                     <svg className="w-6 h-6 shrink-0" viewBox="0 0 24 24">
@@ -57,47 +71,29 @@ export default function Login() {
                                         <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
                                         <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
                                     </svg>
-                                    Continue with Google
+                                    Sign up with Google
                                 </>
                             )}
                         </button>
 
-                        {/* Trust badges */}
-                        <div className="mt-8 flex flex-col gap-4">
-                            <div className="flex items-center gap-3 text-sm text-gray-500 justify-center">
-                                <div className="h-px bg-white/10 flex-1"></div>
-                                <span>Secure &amp; Private</span>
-                                <div className="h-px bg-white/10 flex-1"></div>
-                            </div>
-                            <div className="grid grid-cols-2 gap-3">
-                                <div className="flex flex-col items-center gap-2 p-3 rounded-2xl bg-white/[0.03] border border-white/5">
-                                    <Shield className="w-5 h-5 text-indigo-400" />
-                                    <span className="text-[10px] text-gray-500 uppercase tracking-widest font-bold">Encrypted</span>
-                                </div>
-                                <div className="flex flex-col items-center gap-2 p-3 rounded-2xl bg-white/[0.03] border border-white/5">
-                                    <Lock className="w-5 h-5 text-purple-400" />
-                                    <span className="text-[10px] text-gray-500 uppercase tracking-widest font-bold">Full Control</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Switch to signup */}
+                        {/* Switch to login */}
                         <div className="mt-8 text-center">
                             <p className="text-sm text-gray-500">
-                                Don't have an account?{' '}
-                                <Link to="/signup" className="text-indigo-400 hover:text-indigo-300 font-semibold transition-colors">
-                                    Create one
+                                Already have an account?{' '}
+                                <Link to="/login" className="text-indigo-400 hover:text-indigo-300 font-semibold transition-colors">
+                                    Sign in
                                 </Link>
                             </p>
                         </div>
                     </div>
 
                     <p className="mt-6 text-center text-xs text-gray-600 px-8 leading-relaxed">
-                        By continuing, you agree to our{' '}
+                        By signing up, you agree to our{' '}
                         <Link to="/terms" className="text-gray-500 hover:text-white transition-colors">Terms</Link>
                         {' '}and{' '}
                         <Link to="/privacy" className="text-gray-500 hover:text-white transition-colors">Privacy Policy</Link>.
-                        Your data is stored exclusively in your Google Drive.
+                        Your tasks are stored exclusively in a folder named{' '}
+                        <span className="text-gray-400 font-mono">DRIVEOS</span> in your Google Drive.
                     </p>
                 </div>
             </div>

@@ -1,6 +1,6 @@
 import { Footer } from '@/components/Footer';
 import { Shield, Lock, Eye, Download } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Navbar } from '@/components/Navbar';
 
 export default function Privacy() {
     return (
@@ -11,20 +11,8 @@ export default function Privacy() {
                 <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-purple-600/10 rounded-full mix-blend-screen filter blur-[120px] animate-pulse delay-700"></div>
             </div>
 
-            {/* Simple Nav */}
-            <nav className="relative z-50 border-b border-white/5 bg-black/50 backdrop-blur-xl sticky top-0">
-                <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-                    <Link to="/" className="flex items-center gap-3 group cursor-pointer">
-                        <img src="/logo.svg" alt="CloudTodo Logo" className="w-8 h-8 group-hover:rotate-12 transition-transform duration-300" />
-                        <span className="text-2xl font-bold tracking-tighter bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent uppercase">
-                            CloudTodo
-                        </span>
-                    </Link>
-                    <Link to="/login" className="text-sm font-bold text-indigo-400 hover:text-indigo-300 transition-colors uppercase tracking-widest">
-                        Get Started
-                    </Link>
-                </div>
-            </nav>
+            {/* Navbar */}
+            <Navbar />
 
             <main className="flex-1 relative z-10 max-w-4xl mx-auto px-6 py-24">
                 <div className="mb-16">
@@ -44,9 +32,9 @@ export default function Privacy() {
                         </div>
                         <div className="text-gray-400 space-y-4 leading-relaxed">
                             <p>
-                                CloudTodo is built on a "Bring Your Own Storage" model. When you use CloudTodo,
+                                DriveOS is built on a "Bring Your Own Storage" model. When you use DriveOS,
                                 your data is stored exclusively in your personal Google Drive account in a
-                                folder named <span className="text-white font-mono bg-white/5 px-2 py-0.5 rounded">CLOUDTODO</span>.
+                                folder named <span className="text-white font-mono bg-white/5 px-2 py-0.5 rounded">DRIVEOS</span>.
                             </p>
                             <p>
                                 We do not own any servers used to store your task data. This means your
@@ -103,7 +91,7 @@ export default function Privacy() {
                         </div>
                         <p className="text-gray-400 leading-relaxed">
                             Since your data is in your Google Drive, you have the ultimate right: you can delete
-                            the <span className="text-white font-mono">CLOUDTODO</span> folder at any time
+                            the <span className="text-white font-mono">DRIVEOS</span> folder at any time
                             using the Google Drive web interface. You can also revoke our app's access
                             from your Google Account settings instantly.
                         </p>

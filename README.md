@@ -1,8 +1,8 @@
-# CloudTodo — Google Drive-Based Task Management
+# DriveOS — Google Drive-Based Task Management
 
 ## Overview
 
-CloudTodo is a privacy-first, production-grade task management application that uses your personal Google Drive as the sole backend. Zero third-party databases, zero servers, zero tracking — your data lives in your Drive and nowhere else.
+DriveOS is a privacy-first, production-grade task management application that uses your personal Google Drive as the sole backend. Zero third-party databases, zero servers, zero tracking — your data lives in your Drive and nowhere else.
 
 ---
 
@@ -17,7 +17,7 @@ CloudTodo is a privacy-first, production-grade task management application that 
 
 ### User-Owned Storage
 - **Decentralized Storage**: Tasks stored as JSON files in your own Google Drive.
-- **Native Attachments**: Images, videos, documents in per-task folders under `CLOUDTODO/attachments/`.
+- **Native Attachments**: Images, videos, documents in per-task folders under `DRIVEOS/attachments/`.
 - **Zero-Server Footprint**: Data moves directly between browser and Google's infrastructure — no intermediate backend.
 
 ### AI-Powered Suggestions
@@ -41,7 +41,7 @@ CloudTodo is a privacy-first, production-grade task management application that 
 ### Drive Folder Structure
 ```
 User's Google Drive
-└── CLOUDTODO/
+└── DRIVEOS/
     ├── tasks/                    # JSON task files
     └── attachments/              # Per-task binary folders
 ```
@@ -99,8 +99,8 @@ src/sync/
 
 ### 2. Local Setup
 ```bash
-git clone https://github.com/yourdudeken/cloudtodo.git
-cd cloudtodo
+git clone https://github.com/yourdudeken/driveos.git
+cd driveos
 npm install
 cp .env.example .env
 # Edit .env with your VITE_GOOGLE_CLIENT_ID and VITE_OPENAI_API_KEY
@@ -137,7 +137,7 @@ docker compose up      # Full production stack via nginx
 ## Privacy & Security
 
 - **Data Sovereignty**: No backend, no tracking, no analytics — your data stays in your Google Drive.
-- **Scoped Access**: Only `drive.file` scope — CloudTodo cannot read your private Drive documents.
+- **Scoped Access**: Only `drive.file` scope — DriveOS cannot read your private Drive documents.
 - **CSP Enforced**: Content-Security-Policy meta tag + nginx headers restrict script sources and inline execution.
 - **Token Security**: OAuth token expiry tracked; re-auth triggered 60s before expiry.
 - **Input Safety**: All user content rendered safely; no XSS vectors via CSP.

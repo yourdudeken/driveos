@@ -16,13 +16,13 @@ The app is deployed to Vercel as a static SPA.
 
 ```bash
 # Build
-docker build -t cloudtodo .
+docker build -t driveos .
 
 # Run
 docker run -p 80:80 \
   -e VITE_GOOGLE_CLIENT_ID=your-client-id \
   -e VITE_OPENAI_API_KEY=your-key \
-  cloudtodo
+  driveos
 ```
 
 ## Docker Compose

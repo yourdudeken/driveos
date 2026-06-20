@@ -5,7 +5,7 @@ import { useAuthStore } from '@/store/authStore';
 const DRIVE_API_URL = 'https://www.googleapis.com/drive/v3';
 const UPLOAD_API_URL = 'https://www.googleapis.com/upload/drive/v3';
 
-const ROOT_FOLDER_NAME = 'CLOUDTODO';
+const ROOT_FOLDER_NAME = 'DRIVEOS';
 export const SUBFOLDERS = {
     TASKS: 'tasks',
     ATTACHMENTS: 'attachments'
@@ -115,7 +115,7 @@ export const googleDriveService = {
         for (const file of files) {
             // Check both properties and appProperties for backward compatibility
             // appProperties are private to the user/app, properties are public to any user with access to the file
-            const isOurApp = file.properties?.app === 'cloudtodo' || file.appProperties?.app === 'cloudtodo';
+            const isOurApp = file.properties?.app === 'driveos' || file.appProperties?.app === 'driveos';
             if (!isOurApp) continue;
 
             try {
@@ -147,7 +147,7 @@ export const googleDriveService = {
             mimeType: 'application/json',
             parents: [tasksFolderId],
             properties: {
-                app: 'cloudtodo',
+                app: 'driveos',
                 type: 'personal'
             }
         };

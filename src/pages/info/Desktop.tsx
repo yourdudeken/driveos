@@ -1,6 +1,7 @@
 import { Footer } from '@/components/Footer';
 import { Monitor, Smartphone, Globe, ArrowRight, Github } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { Navbar } from '@/components/Navbar';
 
 export default function Desktop() {
     return (
@@ -11,26 +12,14 @@ export default function Desktop() {
                 <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-purple-600/10 rounded-full mix-blend-screen filter blur-[120px] animate-pulse delay-700"></div>
             </div>
 
-            {/* Simple Nav */}
-            <nav className="relative z-50 border-b border-white/5 bg-black/50 backdrop-blur-xl sticky top-0">
-                <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-                    <Link to="/" className="flex items-center gap-3 group cursor-pointer">
-                        <img src="/logo.svg" alt="CloudTodo Logo" className="w-8 h-8 group-hover:rotate-12 transition-transform duration-300" />
-                        <span className="text-2xl font-bold tracking-tighter bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent uppercase">
-                            CloudTodo
-                        </span>
-                    </Link>
-                    <Link to="/login" className="text-sm font-bold text-indigo-400 hover:text-indigo-300 transition-colors uppercase tracking-widest">
-                        Get Started
-                    </Link>
-                </div>
-            </nav>
+            {/* Navbar */}
+            <Navbar />
 
             <main className="flex-1 relative z-10 max-w-6xl mx-auto px-6 py-24">
                 <div className="text-center mb-24">
                     <h1 className="text-6xl md:text-8xl font-black mb-8 tracking-tighter">Your space, <br />everywhere.</h1>
                     <p className="text-xl text-gray-400 leading-relaxed font-medium max-w-2xl mx-auto">
-                        CloudTodo is currently available as a progressive web app, with dedicated desktop and mobile apps coming soon.
+                        DriveOS is currently available as a progressive web app, with dedicated desktop and mobile apps coming soon.
                     </p>
                 </div>
 
@@ -80,10 +69,10 @@ export default function Desktop() {
                 <div className="p-12 rounded-[3rem] bg-indigo-600/10 border border-indigo-500/20 text-center">
                     <h2 className="text-3xl font-bold mb-6">Want to contribute?</h2>
                     <p className="text-gray-400 mb-8 max-w-xl mx-auto">
-                        CloudTodo is open-source. Help us build the native desktop clients or mobile experiences
+                        DriveOS is open-source. Help us build the native desktop clients or mobile experiences
                         on GitHub.
                     </p>
-                    <a href="https://github.com/yourdudeken/cloudtodo" className="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-white text-black font-bold hover:bg-gray-200 transition-all">
+                    <a href="https://github.com/yourdudeken/driveos" className="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-white text-black font-bold hover:bg-gray-200 transition-all">
                         <Github className="w-5 h-5" />
                         Explore the Repository
                     </a>

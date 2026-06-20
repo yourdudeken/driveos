@@ -1,6 +1,6 @@
 import type { Task } from '@/types';
 
-const DB_NAME = 'cloudtodo';
+const DB_NAME = 'driveos';
 const DB_VERSION = 1;
 
 let db: IDBDatabase | null = null;

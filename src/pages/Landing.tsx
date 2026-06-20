@@ -1,18 +1,16 @@
 import { Link } from 'react-router-dom';
 import { useEffect } from 'react';
-import { useAuthStore } from '@/store/authStore';
-import { Button } from '@/components/ui/button';
 import { Shield, Cloud, Zap, ArrowRight, CheckCircle2, Github } from 'lucide-react';
 import { Footer } from '@/components/Footer';
+import { Navbar } from '@/components/Navbar';
+import { Button } from '@/components/ui/button';
 
 export default function Landing() {
-    const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-
     useEffect(() => {
-        document.title = "CloudTodo | Privacy-First Todo App";
+        document.title = "DriveOS | Privacy-First Todo App";
         const meta = document.querySelector('meta[name="description"]');
         if (meta) {
-            meta.setAttribute("content", "Stunningly simple, completely private. CloudTodo stores your tasks directly in your Google Drive. No external servers, no tracking.");
+            meta.setAttribute("content", "Stunningly simple, completely private. DriveOS stores your tasks directly in your Google Drive. No external servers, no tracking.");
         }
     }, []);
 
@@ -26,39 +24,7 @@ export default function Landing() {
             </div>
 
             {/* Navbar */}
-            <nav className="relative z-50 border-b border-white/5 bg-black/50 backdrop-blur-xl sticky top-0">
-                <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-                    <Link to="/" className="flex items-center gap-3 group cursor-pointer">
-                        <img src="/logo.svg" alt="CloudTodo Logo" className="w-8 h-8 group-hover:scale-110 transition-transform duration-300" />
-                        <span className="text-2xl font-bold tracking-tighter bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent uppercase">
-                            CloudTodo
-                        </span>
-                    </Link>
-
-                    <div className="hidden md:flex items-center gap-8 text-sm font-medium text-gray-400">
-                        <Link to="/features" className="hover:text-white transition-colors">Features</Link>
-                        <Link to="/how-it-works" className="hover:text-white transition-colors">How it Works</Link>
-                        <Link to="/how-it-works" className="hover:text-white transition-colors">Security</Link>
-                    </div>
-
-                    <div className="flex items-center gap-4">
-                        {isAuthenticated ? (
-                            <Button asChild variant="default" className="rounded-full px-6 bg-indigo-600 hover:bg-indigo-700">
-                                <Link to="/dashboard">Go to Dashboard</Link>
-                            </Button>
-                        ) : (
-                            <>
-                                <Link to="/login" className="text-sm font-medium text-gray-400 hover:text-white transition-colors">
-                                    Sign In
-                                </Link>
-                                <Button asChild className="rounded-full px-6 bg-white text-black hover:bg-gray-200 transition-all border-none font-semibold">
-                                    <Link to="/login">Get Started</Link>
-                                </Button>
-                            </>
-                        )}
-                    </div>
-                </div>
-            </nav>
+            <Navbar />
 
             <main className="flex-1 relative z-10">
                 {/* Hero Section */}
@@ -81,13 +47,13 @@ export default function Landing() {
 
                         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                             <Button asChild size="lg" className="rounded-full px-8 py-7 text-lg bg-indigo-600 hover:bg-indigo-700 shadow-2xl shadow-indigo-500/20 group">
-                                <Link to="/login" className="flex items-center gap-2">
+                                <Link to="/signup" className="flex items-center gap-2">
                                     Start Building for Free
                                     <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                                 </Link>
                             </Button>
                             <Button asChild variant="outline" size="lg" className="rounded-full px-8 py-7 text-lg border-white/10 hover:bg-white/5 bg-transparent text-white">
-                                <a href="https://github.com/yourdudeken/cloudtodo" target="_blank" rel="noreferrer" className="flex items-center gap-2">
+                                <a href="https://github.com/yourdudeken/driveos" target="_blank" rel="noreferrer" className="flex items-center gap-2">
                                     <Github className="w-5 h-5" />
                                     View Source
                                 </a>
@@ -160,7 +126,7 @@ export default function Landing() {
                                     <div className="relative p-10 rounded-[3rem] bg-white/[0.02] border border-white/5 overflow-hidden">
                                         <pre className="text-xs md:text-sm font-mono text-indigo-300 leading-relaxed">
                                             <code>{`
-// CloudTodo Security Protocol
+// DriveOS Security Protocol
 {
   "auth": "OAuth 2.0",
   "data_storage": "Client-Side Only",
@@ -177,7 +143,7 @@ export default function Landing() {
                             <div className="flex-1 order-1 md:order-2">
                                 <h2 className="text-4xl md:text-6xl font-black mb-8 tracking-tighter">Enterprise-grade security, <br /><span className="text-indigo-500">for everyone.</span></h2>
                                 <p className="text-gray-400 text-lg leading-relaxed mb-8">
-                                    CloudTodo leverages Google’s multi-billion dollar security infrastructure.
+                                    DriveOS leverages Google’s multi-billion dollar security infrastructure.
                                     We don't store your tasks on our servers because we don't have servers for your tasks.
                                 </p>
                                 <ul className="space-y-4">
@@ -206,7 +172,7 @@ export default function Landing() {
                                 <div className="space-y-8">
                                     {[
                                         { step: "01", title: "Authenticate with Google", desc: "Securely link your account using industry-standard OAuth 2.0." },
-                                        { step: "02", title: "Create Your Space", desc: "CloudTodo automatically creates an organized folder structure in your Drive." },
+                                        { step: "02", title: "Create Your Space", desc: "DriveOS automatically creates an organized folder structure in your Drive." },
                                         { step: "03", title: "Start Organizing", desc: "Add tasks, upload attachments, and enjoy full control of your digital life." }
                                     ].map((s, i) => (
                                         <div key={i} className="flex gap-6 group">
@@ -228,14 +194,14 @@ export default function Landing() {
                                             <span>POST /drive/v3/files (task-123.json)</span>
                                         </div>
                                         <div className="flex items-center gap-2 pl-6 border-l border-white/10 ml-2">
-                                            <span className="text-gray-500">→ Storing in CLOUDTODO/ root</span>
+                                            <span className="text-gray-500">→ Storing in DRIVEOS/ root</span>
                                         </div>
                                         <div className="flex items-center gap-2">
                                             <CheckCircle2 className="w-4 h-4 text-green-500" />
                                             <span>MULTIPART /upload/drive/v3 (attachment.png)</span>
                                         </div>
                                         <div className="flex items-center gap-2 pl-6 border-l border-white/10 ml-2">
-                                            <span className="text-gray-500">→ Storing in CLOUDTODO/PICTURES</span>
+                                            <span className="text-gray-500">→ Storing in DRIVEOS/PICTURES</span>
                                         </div>
                                     </div>
                                 </div>

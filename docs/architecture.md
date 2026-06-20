@@ -2,7 +2,7 @@
 
 ## Overview
 
-CloudTodo is a single-page application (SPA) with no backend server. All user data is stored in the user's Google Drive. The application runs entirely in the browser.
+DriveOS is a single-page application (SPA) with no backend server. All user data is stored in the user's Google Drive. The application runs entirely in the browser.
 
 ## Key Design Decisions
 
@@ -23,7 +23,7 @@ All Drive API calls are made directly from the browser using OAuth 2.0 tokens. T
 
 **Folder Structure:**
 ```
-CLOUDTODO/
+DRIVEOS/
 ├── tasks/           # Task JSON files
 └── attachments/     # Per-task attachment folders
     └── <taskId>/
@@ -33,7 +33,7 @@ CLOUDTODO/
 
 Three-tier storage:
 1. **Zustand** (in-memory) — UI state, instant reactivity
-2. **IndexedDB** (`cloudtodo` database) — persistent cache, offline queue
+2. **IndexedDB** (`driveos` database) — persistent cache, offline queue
 3. **Google Drive** — source of truth, cross-device sync
 
 ### Sync Architecture

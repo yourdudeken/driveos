@@ -1,6 +1,6 @@
 import { Footer } from '@/components/Footer';
 import { Shield, Zap, Layout, Columns, Search, Tag, MousePointer2, Smartphone, Lock } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Navbar } from '@/components/Navbar';
 
 export default function Features() {
     return (
@@ -11,26 +11,14 @@ export default function Features() {
                 <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-purple-600/10 rounded-full mix-blend-screen filter blur-[120px] animate-pulse delay-700"></div>
             </div>
 
-            {/* Simple Nav */}
-            <nav className="relative z-50 border-b border-white/5 bg-black/50 backdrop-blur-xl sticky top-0">
-                <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-                    <Link to="/" className="flex items-center gap-3 group cursor-pointer">
-                        <img src="/logo.svg" alt="CloudTodo Logo" className="w-8 h-8 group-hover:rotate-12 transition-transform duration-300" />
-                        <span className="text-2xl font-bold tracking-tighter bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent uppercase">
-                            CloudTodo
-                        </span>
-                    </Link>
-                    <Link to="/login" className="text-sm font-bold text-indigo-400 hover:text-indigo-300 transition-colors uppercase tracking-widest">
-                        Get Started
-                    </Link>
-                </div>
-            </nav>
+            {/* Navbar */}
+            <Navbar />
 
             <main className="flex-1 relative z-10 max-w-7xl mx-auto px-6 py-24">
                 <div className="text-center mb-24">
                     <h1 className="text-6xl md:text-8xl font-black mb-8 tracking-tighter">Engineered for<br />productivity.</h1>
                     <p className="text-xl text-gray-400 leading-relaxed font-medium max-w-3xl mx-auto">
-                        We've packed CloudTodo with professional features while keeping the interface clean and the data entirely in your control.
+                        We've packed DriveOS with professional features while keeping the interface clean and the data entirely in your control.
                     </p>
                 </div>
 

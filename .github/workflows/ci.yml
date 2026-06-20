@@ -46,8 +46,8 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: cloudtodo-package
-          path: cloudtodo-*.tgz
+          name: driveos-package
+          path: driveos-*.tgz
 
       - uses: actions/upload-pages-artifact@v3
         with:
@@ -111,7 +111,7 @@ jobs:
           context: .
           push: true
           tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/cloudtodo:${{ needs.version.outputs.new_tag }}
-            ${{ secrets.DOCKERHUB_USERNAME }}/cloudtodo:latest
-            ghcr.io/${{ github.repository }}/cloudtodo:${{ needs.version.outputs.new_tag }}
-            ghcr.io/${{ github.repository }}/cloudtodo:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/driveos:${{ needs.version.outputs.new_tag }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/driveos:latest
+            ghcr.io/${{ github.repository }}/driveos:${{ needs.version.outputs.new_tag }}
+            ghcr.io/${{ github.repository }}/driveos:latest

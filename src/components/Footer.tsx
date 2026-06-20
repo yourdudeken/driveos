@@ -8,9 +8,9 @@ export function Footer() {
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
                     <div className="col-span-1 md:col-span-2">
                         <Link to="/" className="flex items-center gap-2 mb-6 group w-fit">
-                            <img src="/logo.svg" alt="CloudTodo Logo" className="w-8 h-8 group-hover:scale-110 transition-transform duration-300" />
+                            <img src="/logo.png" alt="DriveOS Logo" className="w-14 h-14 group-hover:scale-110 transition-transform duration-300" />
                             <span className="text-2xl font-black tracking-tighter bg-gradient-to-r from-white to-gray-500 bg-clip-text text-transparent uppercase">
-                                CloudTodo
+
                             </span>
                         </Link>
                         <p className="text-gray-500 text-sm max-w-sm leading-relaxed mb-8">
@@ -19,13 +19,13 @@ export function Footer() {
                             professional.
                         </p>
                         <div className="flex items-center gap-5">
-                            <a href="https://x.com/cloudtodo" target="_blank" rel="noreferrer" className="text-gray-400 hover:text-indigo-400 transition-colors">
+                            <a href="https://x.com/driveos" target="_blank" rel="noreferrer" className="text-gray-400 hover:text-indigo-400 transition-colors">
                                 <Twitter className="w-5 h-5" />
                             </a>
-                            <a href="https://github.com/yourdudeken/cloudtodo" target="_blank" rel="noreferrer" className="text-gray-400 hover:text-indigo-400 transition-colors">
+                            <a href="https://github.com/yourdudeken/driveos" target="_blank" rel="noreferrer" className="text-gray-400 hover:text-indigo-400 transition-colors">
                                 <Github className="w-5 h-5" />
                             </a>
-                            <a href="mailto:hello@cloudtodo.com" className="text-gray-400 hover:text-indigo-400 transition-colors">
+                            <a href="mailto:hello@driveos.com" className="text-gray-400 hover:text-indigo-400 transition-colors">
                                 <Mail className="w-5 h-5" />
                             </a>
                         </div>
@@ -49,7 +49,7 @@ export function Footer() {
                         <ul className="space-y-4 text-sm text-gray-500 font-medium">
                             <li><Link to="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link></li>
                             <li><Link to="/terms" className="hover:text-white transition-colors">Terms of Service</Link></li>
-                            <li><a href="https://github.com/yourdudeken/cloudtodo" target="_blank" rel="noreferrer" className="flex items-center gap-2 hover:text-white transition-colors">
+                            <li><a href="https://github.com/yourdudeken/driveos" target="_blank" rel="noreferrer" className="flex items-center gap-2 hover:text-white transition-colors">
                                 Open Source <ExternalLink className="w-3 h-3" />
                             </a></li>
                         </ul>
@@ -57,7 +57,7 @@ export function Footer() {
                 </div>
 
                 <div className="pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-4 text-xs font-bold text-gray-600 uppercase tracking-widest">
-                    <p>© 2026 CLOUDTODO. ALL RIGHTS RESERVED.</p>
+                    <p>© 2026 DRIVEOS. ALL RIGHTS RESERVED.</p>
                     <div className="flex items-center gap-8">
                         <span>Built by human for humans</span>
                         <div className="flex items-center gap-1">
