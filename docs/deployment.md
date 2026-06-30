@@ -44,5 +44,6 @@ The `nginx.conf` serves the built SPA with:
 
 See `.github/workflows/ci.yml`:
 1. `lint-and-typecheck` — ESLint + tsc
-2. `build` — production build
-3. `docker` — publish image to GitHub Container Registry (main branch only)
+2. `test` — runs the Vitest unit tests (covering sync, permissions, and utility modules)
+3. `build` — production build
+4. `docker` — publish image to GitHub Container Registry (main branch only)

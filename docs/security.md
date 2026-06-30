@@ -13,19 +13,20 @@ Content-Security-Policy is enforced via `<meta>` tag and nginx headers:
 - Objects, base-uri: restricted
 
 ### Authentication
-- OAuth 2.0 via Google Identity Services (implicit flow)
-- Token stored in Zustand persist (localStorage)
-- `access_token` held in localStorage during session
-- Token expiry tracked via `expires_in` field
+- **OAuth 2.0 via Google Identity Services (implicit flow)**: Handled entirely on the client.
+- **Incremental Scopes**:
+  - Starts with the narrow `https://www.googleapis.com/auth/drive.file` scope, giving the app permission to access only the folders and files it creates.
+  - Dynamically prompts for permission elevation to `https://www.googleapis.com/auth/drive` when the user joins a collaborative board via invitation link (since board folders are created by other users).
+- **Session Persistence**: Tokens are stored in Zustand's persisted state (localStorage), including tracked `expires_in` timestamps for automatic re-auth checks.
 
 ### Token Security Warning
-The `access_token` is stored in localStorage. This is a known limitation of the GIS implicit flow. In the future this should use the Token Model (token endpoint) with refresh token rotation.
+The `access_token` is stored in localStorage. This is a known security trade-off of the GIS implicit flow. Future revisions will transition to the Authorization Code Flow (Token Model) with backend refresh token rotation.
 
 ### OpenAI API Key
 The `VITE_OPENAI_API_KEY` is embedded in the client bundle. To mitigate:
-1. Restrict the key's allowed domains in OpenAI dashboard
-2. Do not use a key with billing limits that could cause financial damage
-3. Future: proxy through an edge function
+1. Restrict the key's allowed domains in OpenAI dashboard.
+2. Do not use a key with billing limits that could cause financial damage.
+3. Future: proxy through an edge function.
 
 ## Hardening Checklist
 

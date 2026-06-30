@@ -18,13 +18,15 @@ All Drive API calls are made directly from the browser using OAuth 2.0 tokens. T
 
 - Google Drive folders replace database collections
 - JSON files replace database documents
-- Properties and appProperties serve as lightweight indexes
-- Drive API permissions enable sharing (future)
+- Properties and appProperties serve as lightweight metadata indexes
+- Drive API permissions resources enable collaborative shared board folder access
 
 **Folder Structure:**
 ```
 DRIVEOS/
-├── tasks/           # Task JSON files
+├── tasks/           # Personal task JSON files
+├── boards/          # Collaborative board folders
+│   └── <boardId>/   # Task JSON files belonging to a specific board
 └── attachments/     # Per-task attachment folders
     └── <taskId>/
 ```
@@ -32,9 +34,9 @@ DRIVEOS/
 ### Offline-First
 
 Three-tier storage:
-1. **Zustand** (in-memory) — UI state, instant reactivity
-2. **IndexedDB** (`driveos` database) — persistent cache, offline queue
-3. **Google Drive** — source of truth, cross-device sync
+1. **Zustand** (in-memory) — UI state (tasks, active views, boards listing, conflicts queue), instant reactivity.
+2. **IndexedDB** (`driveos` database version 2) — persistent cache containing five object stores (`tasks`, `sync`, `queue`, `blobs`, `boards`). Tasks are indexed on `boardId` for separation of spaces.
+3. **Google Drive** — source of truth, cross-device sync.
 
 ### Sync Architecture
 
@@ -52,25 +54,26 @@ Three-tier storage:
                            ▼
                     ┌──────────────┐     ┌────────────┐
                     │ Sync Engine  │────▶│ Google     │
-                    │              │◀────│ Drive API  │
-                    └──────────────┘     └────────────┘
+                    │ (With Parent │◀────│ Drive API  │
+                    │  Filtering)  │     └────────────┘
+                    └──────────────┘
 ```
 
 ## Module Boundaries
 
 | Directory | Responsibility |
 |-----------|---------------|
-| `src/lib/` | Utilities, API clients, retry, logging |
-| `src/sync/` | Sync engine, cache store, queue, conflict resolution |
-| `src/store/` | Zustand state management |
-| `src/hooks/` | React hooks (auth, AI, sync) |
-| `src/components/` | Reusable UI components |
-| `src/pages/` | Route-level page components |
+| `src/lib/` | Utilities, API clients, retry, logging, permission helpers |
+| `src/sync/` | Sync engine, cache store, queue, LWW & pending conflict resolution |
+| `src/store/` | Zustand state management (tasks, boards, conflicts) |
+| `src/hooks/` | React hooks (auth, AI, sync engine activation) |
+| `src/components/` | Reusable UI components (Task modals, Conflict UI, Share board modal) |
+| `src/pages/` | Route-level page components (Dashboard, Login, Landing, JoinBoard) |
 | `src/types/` | TypeScript type definitions |
 
 ## Security
 
-- CSP enforced via meta tag and nginx headers
-- OAuth token held in-memory during session
-- IndexedDB scoped to origin
-- OpenAI API key exposed client-side (required by architecture; restrict key domain in OpenAI dashboard)
+- CSP enforced via meta tag and nginx headers.
+- OAuth token held in-memory during session, with incremental consent flows requesting elevated scope only when accessing shared board folders.
+- IndexedDB scoped to origin.
+- OpenAI API key exposed client-side (required by architecture; restrict key domain in OpenAI dashboard).

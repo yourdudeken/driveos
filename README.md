@@ -9,14 +9,19 @@ DriveOS is a privacy-first, production-grade task management application that us
 ## Key Features
 
 ### Offline-First Sync Engine
-- **Incremental Sync**: Drive Changes API detects only what changed — ~90% fewer API calls vs. full re-fetch every cycle.
-- **IndexedDB Cache**: Unlimited structured offline storage (4 object stores: tasks, sync, queue, blobs).
+- **Incremental Sync**: Drive Changes API detects only what changed — ~90% fewer API calls vs. full re-fetch every cycle. Supports parent-folder filtering to restrict reads to personal tasks and joined boards.
+- **IndexedDB Cache**: Structured offline storage with version 2 schema (5 object stores: tasks, sync, queue, blobs, boards). Includes `boardId` index for board-level task querying.
 - **Offline Mutation Queue**: Create, update, and delete tasks while offline. Changes replay automatically when connectivity returns.
-- **Conflict Resolution**: Last-Write-Wins with per-task metadata tracking and conflict event logging.
+- **Conflict Resolution**: Last-Write-Wins (LWW) for personal tasks; interactive side-by-side comparative UI modal for collaborative task conflicts.
 - **60-Second Polling**: Background sync keeps local state fresh without quota exhaustion.
 
+### Collaborative Shared Boards
+- **Native Drive Collaboration**: Share specific task folders using Google Drive's native permission sharing API. Board owners manage member roles (Reader/Writer) directly within the app.
+- **Incremental OAuth Flow**: App starts with narrow `drive.file` scope. Clicking a board join link dynamically prompts for incremental `drive` scope consent to access shared folders not created by the app.
+- **Out-of-Band Invitation Links**: Secure, shareable join links that package the Drive folder ID, allowing guests to join instantly.
+
 ### User-Owned Storage
-- **Decentralized Storage**: Tasks stored as JSON files in your own Google Drive.
+- **Decentralized Storage**: Tasks stored as JSON files in your own Google Drive under `DRIVEOS/tasks/` or `DRIVEOS/boards/`.
 - **Native Attachments**: Images, videos, documents in per-task folders under `DRIVEOS/attachments/`.
 - **Zero-Server Footprint**: Data moves directly between browser and Google's infrastructure — no intermediate backend.
 
@@ -25,8 +30,9 @@ DriveOS is a privacy-first, production-grade task management application that us
 
 ### Premium UI/UX
 - **Dark-Mode Interface**: Glassmorphism, smooth transitions, vibrant accents.
-- **Multi-View**: Grid View and Kanban Board with category filtering.
-- **Code-Split**: 23 lazy-loaded chunks — Dashboard loads on demand (93 KB gzip: 27 KB).
+- **Multi-View**: Grid View and Kanban Board with category and collaborative board filtering.
+- **Conflict UI**: A visually beautiful side-by-side resolution screen comparing concurrent modifications field-by-field.
+- **Code-Split**: Lazy-loaded route chunks — Dashboard loads on demand.
 
 ### Production Infrastructure
 - **Observability**: Structured logger (4 levels, session IDs), error boundaries, toast notifications.
@@ -42,25 +48,27 @@ DriveOS is a privacy-first, production-grade task management application that us
 ```
 User's Google Drive
 └── DRIVEOS/
-    ├── tasks/                    # JSON task files
+    ├── tasks/                    # Personal JSON task files
+    ├── boards/                   # Folder container for shared boards
+    │   └── <boardId>/            # Tasks belonging to a specific board folder
     └── attachments/              # Per-task binary folders
 ```
 
 ### Sync Architecture
 ```
 src/sync/
-├── syncEngine.ts         # Orchestrator: change detection → pull → merge → persist
+├── syncEngine.ts         # Orchestrator: change detection → parent filter → pull → merge → persist
 ├── changeTracker.ts      # Drive Changes API wrapper (incremental, pageToken persisted)
-├── conflictResolver.ts   # LWW conflict detection with event logging
+├── conflictResolver.ts   # LWW & pending conflict detector with event logging
 ├── syncQueue.ts          # Offline mutation queue (IndexedDB-backed)
-├── cacheStore.ts         # IndexedDB layer (4 object stores, shared DB connection)
+├── cacheStore.ts         # IndexedDB layer (Version 2, boards store & boardId index)
 └── searchIndex.ts        # In-memory full-text search (multi-term, case-insensitive)
 ```
 
 ### Data Flow
-1. **Auth**: Google OAuth 2.0 (GIS) — token expiry tracked, re-auth triggered automatically.
+1. **Auth**: Google OAuth 2.0 (GIS) — token expiry tracked, incremental auth requested on joining a shared board.
 2. **Local Write**: Optimistic UI update → IndexedDB cache → offline queue (if offline).
-3. **Sync**: Drive Changes API detects changes → only reads modified files → resolves conflicts → writes to IndexedDB + Zustand.
+3. **Sync**: Drive Changes API detects changes → filters by personal/board folder ID → resolves conflicts → writes to IndexedDB + Zustand.
 4. **Hydration**: On load, reads IndexedDB first (instant), then syncs with Drive (background).
 
 ---
@@ -76,11 +84,11 @@ src/sync/
 | Icons | Lucide React |
 | Networking | Axios (Google Drive API v3, OpenAI API) |
 | AI | OpenAI `gpt-4o-mini` |
-| Auth | Google Identity Services (GIS) OAuth 2.0, `drive.file` scope |
-| Sync | Drive Changes API, IndexedDB, offline queue |
-| Testing | Vitest + jsdom (15 tests, 3 suites) |
+| Auth | Google Identity Services (GIS) OAuth 2.0 (`drive.file` + dynamic `drive` scope) |
+| Sync | Drive Changes API, IndexedDB (v2 schema), offline queue |
+| Testing | Vitest + jsdom (21 tests, 4 suites) |
 | CI/CD | GitHub Actions, Docker, Docker Compose |
-| Serving | nginx (SPA routing, CSP, security headers, gzip) |
+| Serving | Nginx (SPA routing, CSP, security headers, gzip) |
 | Observability | Structured logger (`DEBUG`/`INFO`/`WARN`/`ERROR` levels) |
 
 ---
