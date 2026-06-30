@@ -103,7 +103,7 @@ git clone https://github.com/yourdudeken/driveos.git
 cd driveos
 npm install
 cp .env.example .env
-# Edit .env with your VITE_GOOGLE_CLIENT_ID and VITE_OPENAI_API_KEY
+# Edit .env with your VITE_GOOGLE_CLIENT_ID and OPENAI_API_KEY
 ```
 
 ### 3. Development

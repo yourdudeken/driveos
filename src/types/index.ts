@@ -32,6 +32,8 @@ export interface Task {
     createdDate: string;
     updatedDate: string;
     googleDriveFileId?: string;
+    /** Set on tasks that belong to a shared board. Absent on personal tasks. */
+    boardId?: string;
 }
 
 export interface User {
@@ -48,4 +50,28 @@ export interface GoogleTokenResponse {
     scope: string;
     token_type: string;
     id_token?: string;
+}
+
+// ── Board / collaboration types ───────────────────────────────────────────────
+
+export type BoardPermissionLevel = 'writer' | 'reader';
+
+export interface BoardMember {
+    email: string;
+    displayName?: string;
+    /** current user's role on this board */
+    role: 'owner' | BoardPermissionLevel;
+    /** Drive permission ID — needed to revoke access */
+    permissionId?: string;
+    photoLink?: string;
+}
+
+export interface Board {
+    /** Drive folder ID — serves as the board's primary key */
+    id: string;
+    name: string;
+    /** The authenticated user's role on this board */
+    role: 'owner' | BoardPermissionLevel;
+    members: BoardMember[];
+    createdAt: string;
 }

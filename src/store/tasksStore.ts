@@ -68,7 +68,9 @@ export const useTasksStore = create<TasksState>()(
                 set({ isLoading: true, error: null });
                 try {
                     const savedTask = await withRetry(() =>
-                        googleDriveService.createTask(newTask)
+                        newTask.boardId
+                            ? googleDriveService.createBoardTask(newTask, newTask.boardId)
+                            : googleDriveService.createTask(newTask)
                     );
                     await cacheStore.putTask(savedTask);
                     set((state) => ({
@@ -83,7 +85,7 @@ export const useTasksStore = create<TasksState>()(
                         const optimisticId = crypto.randomUUID();
                         const offlineTask = { ...newTask, id: optimisticId } as Task;
                         await cacheStore.putTask(offlineTask);
-                        await syncEngine.enqueueOfflineCreate(newTask);
+                        await syncEngine.enqueueOfflineCreate(offlineTask);
                         set((state) => ({
                             tasks: [...state.tasks, offlineTask],
                             isLoading: false,

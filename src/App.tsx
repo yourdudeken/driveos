@@ -17,6 +17,7 @@ const HowItWorks = lazy(() => import('@/pages/info/HowItWorks'));
 const Product = lazy(() => import('@/pages/info/Product'));
 const Company = lazy(() => import('@/pages/info/Company'));
 const Signup = lazy(() => import('@/pages/Signup'));
+const JoinBoard = lazy(() => import('@/pages/JoinBoard'));
 
 function PageLoader() {
   return (
@@ -44,6 +45,7 @@ function App() {
               <Route path="/how-it-works" element={<HowItWorks />} />
               <Route path="/product" element={<Product />} />
               <Route path="/company" element={<Company />} />
+              <Route path="/board/join" element={<JoinBoard />} />
 
               <Route element={<ProtectedRoute />}>
                 <Route path="/dashboard" element={<Dashboard />} />

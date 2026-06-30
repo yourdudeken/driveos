@@ -1,25 +1,35 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useAuthStore } from '@/store/authStore';
 import { useTasksStore } from '@/store/tasksStore';
-import { LogOut, Plus, Search, User, Loader2, ArrowRight, LayoutGrid, Columns, Tag, Menu, X, Pin, Star } from 'lucide-react';
+import { useBoardsStore } from '@/store/boardsStore';
+import { useToast } from '@/components/Toast';
+import { LogOut, Plus, Search, User, Loader2, ArrowRight, LayoutGrid, Columns, Tag, Menu, X, Pin, Star, Share2 } from 'lucide-react';
 import { CreateTaskModal } from '@/components/CreateTaskModal';
 import { TaskDetailsModal } from '@/components/TaskDetailsModal';
 import { KanbanBoard } from '@/components/KanbanBoard';
 import { SyncStatus } from '@/components/SyncStatus';
-import type { Task } from '@/types';
+import type { Task, Board } from '@/types';
 import { useAISuggestions } from '@/hooks/useAISuggestions';
 import { searchIndex } from '@/sync/searchIndex';
 import { AISuggestions } from '@/components/AISuggestions';
 import { useSyncEngine } from '@/hooks/useSyncEngine';
+import { ShareBoardModal } from '@/components/ShareBoardModal';
+import { ConflictResolutionModal } from '@/components/ConflictResolutionModal';
 
 export default function Dashboard() {
     const { user, logout } = useAuthStore();
     const { tasks, fetchTasks, hydrateFromCache, isLoading, viewMode, setViewMode, selectedCategory, setSelectedCategory } = useTasksStore();
+    const { boards, createBoard, hydrateBoards } = useBoardsStore();
+    const { show: showToast } = useToast();
+
     const [selectedTask, setSelectedTask] = useState<Task | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-
     const [activeTab, setActiveTab] = useState('All Tasks');
+
+    const [selectedBoardId, setSelectedBoardId] = useState<string | null>(null);
+    const [sharingBoard, setSharingBoard] = useState<Board | null>(null);
+    const [isShareOpen, setIsShareOpen] = useState(false);
 
     const searchAI = useAISuggestions('search', searchQuery);
 
@@ -32,7 +42,8 @@ export default function Dashboard() {
 
     useEffect(() => {
         hydrateFromCache().then(() => fetchTasks());
-    }, [fetchTasks, hydrateFromCache]);
+        hydrateBoards();
+    }, [fetchTasks, hydrateFromCache, hydrateBoards]);
 
     const categories = useMemo(() => {
         const cats = new Set<string>();
@@ -45,6 +56,13 @@ export default function Dashboard() {
         const todayStr = now.toISOString().split('T')[0];
 
         return tasks.filter(t => {
+            // Board Filtering: selectedBoardId=null shows personal tasks, otherwise matches boardId
+            if (selectedBoardId === null) {
+                if (t.boardId) return false;
+            } else {
+                if (t.boardId !== selectedBoardId) return false;
+            }
+
             // Tab Filtering
             if (activeTab === 'Today' && t.dueDate !== todayStr) return false;
             if (activeTab === 'Upcoming' && (!t.dueDate || t.dueDate <= todayStr)) return false;
@@ -57,7 +75,7 @@ export default function Dashboard() {
 
             return matchesCategory && matchesSearch;
         });
-    }, [tasks, selectedCategory, searchQuery, activeTab]);
+    }, [tasks, selectedCategory, searchQuery, activeTab, selectedBoardId]);
 
     return (
         <div className="flex h-screen bg-black text-white overflow-hidden font-sans relative">
@@ -93,8 +111,8 @@ export default function Dashboard() {
                     </button>
                 </div>
 
-                <nav className="flex-1 px-6 space-y-6">
-                    <CreateTaskModal />
+                <nav className="flex-1 px-6 space-y-6 overflow-y-auto custom-scrollbar">
+                    <CreateTaskModal boardId={selectedBoardId} />
 
                     <div className="space-y-1">
                         <p className="px-4 text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em] mb-4">
@@ -114,6 +132,69 @@ export default function Dashboard() {
                             >
                                 <span className="font-medium">{item}</span>
                             </button>
+                        ))}
+                    </div>
+
+                    <div className="space-y-1 pt-4 border-t border-white/5">
+                        <div className="flex items-center justify-between px-4 mb-2">
+                            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">
+                                Collaborative Boards
+                            </p>
+                            <button
+                                onClick={async () => {
+                                    const name = prompt('Enter a name for the new collaborative board:');
+                                    if (name && name.trim()) {
+                                        try {
+                                            const board = await createBoard(name.trim());
+                                            setSelectedBoardId(board.id);
+                                            showToast('success', `Created board "${board.name}" successfully.`);
+                                        } catch {
+                                            showToast('error', 'Failed to create board.');
+                                        }
+                                    }
+                                }}
+                                className="p-1 hover:bg-white/5 rounded text-indigo-400 hover:text-indigo-300 transition-colors"
+                                title="Create Board"
+                            >
+                                <Plus className="w-4 h-4" />
+                            </button>
+                        </div>
+
+                        {/* Personal Space selector */}
+                        <button
+                            onClick={() => setSelectedBoardId(null)}
+                            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${selectedBoardId === null
+                                ? 'bg-indigo-600/10 text-indigo-400 border border-indigo-500/20'
+                                : 'text-gray-400 hover:text-white hover:bg-white/5 border border-transparent'
+                                }`}
+                        >
+                            <span className="font-medium">Personal Tasks</span>
+                        </button>
+
+                        {/* Custom Boards */}
+                        {boards.map((board) => (
+                            <div key={board.id} className="group relative flex items-center">
+                                <button
+                                    onClick={() => setSelectedBoardId(board.id)}
+                                    className={`w-full text-left flex items-center justify-between px-4 py-3 rounded-xl transition-all duration-200 pr-10 ${selectedBoardId === board.id
+                                        ? 'bg-indigo-600/10 text-indigo-400 border border-indigo-500/20'
+                                        : 'text-gray-400 hover:text-white hover:bg-white/5 border border-transparent'
+                                        }`}
+                                >
+                                    <span className="font-medium truncate">{board.name}</span>
+                                </button>
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setSharingBoard(board);
+                                        setIsShareOpen(true);
+                                    }}
+                                    className="absolute right-3 opacity-0 group-hover:opacity-100 focus:opacity-100 p-1.5 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
+                                    title="Share Board"
+                                >
+                                    <Share2 className="w-3.5 h-3.5" />
+                                </button>
+                            </div>
                         ))}
                     </div>
                 </nav>
@@ -285,6 +366,16 @@ export default function Dashboard() {
                 task={selectedTask}
                 onClose={() => setSelectedTask(null)}
             />
+
+            {sharingBoard && (
+                <ShareBoardModal
+                    board={sharingBoard}
+                    open={isShareOpen}
+                    onOpenChange={setIsShareOpen}
+                />
+            )}
+
+            <ConflictResolutionModal />
         </div>
     );
 }

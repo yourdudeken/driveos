@@ -1,7 +1,7 @@
 import type { Task } from '@/types';
 
 const DB_NAME = 'driveos';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 let db: IDBDatabase | null = null;
 
@@ -13,24 +13,37 @@ export function openDB(): Promise<IDBDatabase> {
 
         request.onupgradeneeded = (event) => {
             const database = (event.target as IDBOpenDBRequest).result;
+            const oldVersion = event.oldVersion;
 
-            if (!database.objectStoreNames.contains('tasks')) {
-                const store = database.createObjectStore('tasks', { keyPath: 'id' });
-                store.createIndex('status', 'status', { unique: false });
-                store.createIndex('updatedDate', 'updatedDate', { unique: false });
-            }
+            // Version 1 — initial schema
+            if (oldVersion < 1) {
+                const taskStore = database.createObjectStore('tasks', { keyPath: 'id' });
+                taskStore.createIndex('status', 'status', { unique: false });
+                taskStore.createIndex('updatedDate', 'updatedDate', { unique: false });
 
-            if (!database.objectStoreNames.contains('sync')) {
                 database.createObjectStore('sync', { keyPath: 'key' });
-            }
 
-            if (!database.objectStoreNames.contains('queue')) {
                 const queue = database.createObjectStore('queue', { keyPath: 'id', autoIncrement: true });
                 queue.createIndex('status', 'status', { unique: false });
+
+                database.createObjectStore('blobs', { keyPath: 'id' });
             }
 
-            if (!database.objectStoreNames.contains('blobs')) {
-                database.createObjectStore('blobs', { keyPath: 'id' });
+            // Version 2 — boards support
+            if (oldVersion < 2) {
+                // Boards metadata store (key-value, like sync)
+                if (!database.objectStoreNames.contains('boards')) {
+                    database.createObjectStore('boards', { keyPath: 'key' });
+                }
+                // Add boardId index to existing tasks store so we can
+                // efficiently query "all tasks for board X".
+                const tx = (event.target as IDBOpenDBRequest).transaction!;
+                if (database.objectStoreNames.contains('tasks')) {
+                    const taskStore = tx.objectStore('tasks');
+                    if (!taskStore.indexNames.contains('boardId')) {
+                        taskStore.createIndex('boardId', 'boardId', { unique: false });
+                    }
+                }
             }
         };
 
@@ -124,13 +137,48 @@ export const cacheStore = {
     async clear(): Promise<void> {
         const database = await openDB();
         return new Promise((resolve, reject) => {
-            const tx = database.transaction(['tasks', 'sync', 'queue', 'blobs'], 'readwrite');
+            const tx = database.transaction(['tasks', 'sync', 'queue', 'blobs', 'boards'], 'readwrite');
             tx.objectStore('tasks').clear();
             tx.objectStore('sync').clear();
             tx.objectStore('queue').clear();
             tx.objectStore('blobs').clear();
+            tx.objectStore('boards').clear();
             tx.oncomplete = () => resolve();
             tx.onerror = () => reject(tx.error);
+        });
+    },
+
+    /** Persist a board record (metadata) keyed by its Drive folder ID. */
+    async putBoardMeta(boardId: string, value: unknown): Promise<void> {
+        const database = await openDB();
+        return new Promise((resolve, reject) => {
+            const tx = database.transaction('boards', 'readwrite');
+            tx.objectStore('boards').put({ key: boardId, value });
+            tx.oncomplete = () => resolve();
+            tx.onerror = () => reject(tx.error);
+        });
+    },
+
+    /** Retrieve a board record by Drive folder ID. */
+    async getBoardMeta(boardId: string): Promise<unknown> {
+        const database = await openDB();
+        return new Promise((resolve, reject) => {
+            const tx = database.transaction('boards', 'readonly');
+            const req = tx.objectStore('boards').get(boardId);
+            req.onsuccess = () => resolve(req.result?.value ?? null);
+            req.onerror = () => reject(req.error);
+        });
+    },
+
+    /** Retrieve all tasks for a specific board from the local cache. */
+    async getTasksByBoard(boardId: string): Promise<Task[]> {
+        const database = await openDB();
+        return new Promise((resolve, reject) => {
+            const tx = database.transaction('tasks', 'readonly');
+            const index = tx.objectStore('tasks').index('boardId');
+            const req = index.getAll(boardId);
+            req.onsuccess = () => resolve(req.result);
+            req.onerror = () => reject(req.error);
         });
     },
 };
