@@ -1,6 +1,7 @@
 import axios from 'axios';
 import type { Task } from '@/types';
 import { useAuthStore } from '@/store/authStore';
+import { logger } from '@/lib/logger';
 
 const DRIVE_API_URL = 'https://www.googleapis.com/drive/v3';
 const UPLOAD_API_URL = 'https://www.googleapis.com/upload/drive/v3';
@@ -58,7 +59,7 @@ export const googleDriveService = {
             let rootFolderId = await this.findFolder(ROOT_FOLDER_NAME, 'root', token);
 
             if (!rootFolderId) {
-                console.log('Root folder not found, creating...');
+                logger.info('Root folder not found, creating...');
                 rootFolderId = await this.createFolder(ROOT_FOLDER_NAME, 'root', token);
             }
 
@@ -78,7 +79,7 @@ export const googleDriveService = {
 
             return folderIds;
         } catch (error) {
-            console.error('Error ensuring folder structure:', error);
+            logger.error('Error ensuring folder structure', undefined, error);
             throw error;
         }
     },
@@ -145,7 +146,7 @@ export const googleDriveService = {
                 const content = await this.readFile(file.id);
                 tasks.push({ ...content, id: file.id, googleDriveFileId: file.id });
             } catch (e) {
-                console.error(`Failed to read task file ${file.id}`, e);
+                logger.error('Failed to read task file', { fileId: file.id }, e);
             }
         }
         return tasks;
@@ -232,7 +233,7 @@ export const googleDriveService = {
             // 3. Delete the folder itself
             await this.deleteTask(folderId);
         } catch (error) {
-            console.error(`Failed to recursively delete folder ${folderId}:`, error);
+            logger.error('Failed to recursively delete folder', { folderId }, error);
             throw error;
         }
     },

@@ -1,35 +1,27 @@
-const API_URL = 'https://openrouter.ai/api/v1/chat/completions';
-// Using the pinned GPT-latest alias via OpenRouter
-const MODEL = 'openrouter/free';
+import { logger } from '@/lib/logger';
 
-function getApiKey(): string {
-    const key = import.meta.env.VITE_OPENROUTER_API_KEY;
-    if (!key) throw new Error('VITE_OPENROUTER_API_KEY not configured');
-    return key;
-}
+/**
+ * All AI calls go through the /api/ai Vercel Function.
+ * The OpenRouter API key lives exclusively in the server environment —
+ * it is never inlined into the browser bundle.
+ */
+const PROXY_URL = '/api/ai';
 
-async function callOpenRouter(messages: { role: string; content: string }[], maxTokens = 200): Promise<string> {
-    const response = await fetch(API_URL, {
+async function callProxy(messages: { role: string; content: string }[], maxTokens = 200): Promise<string> {
+    const response = await fetch(PROXY_URL, {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${getApiKey()}`,
-        },
-        body: JSON.stringify({
-            model: MODEL,
-            messages,
-            temperature: 0.7,
-            max_tokens: maxTokens,
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages, maxTokens }),
     });
 
     if (!response.ok) {
-        console.error('OpenRouter API error:', response.status, await response.text());
-        throw new Error(`OpenRouter error: ${response.status}`);
+        logger.error('AI proxy error', { status: response.status });
+        throw new Error(`AI proxy error: ${response.status}`);
     }
 
-    const data = await response.json();
-    return data.choices?.[0]?.message?.content ?? '';
+    const data = await response.json() as { content?: string; error?: string };
+    if (data.error) throw new Error(data.error);
+    return data.content ?? '';
 }
 
 /** Inline field autocomplete suggestions (used while the user is typing). */
@@ -39,7 +31,7 @@ export async function getSuggestions(field: string, input: string): Promise<stri
     const systemPrompt = `You are a task management assistant. Given the user's current input for "${field}", suggest concise completions. Return a JSON array of exactly 3 strings. Keep each suggestion under 5 words. Only respond with valid JSON, no other text.`;
 
     try {
-        const content = await callOpenRouter([
+        const content = await callProxy([
             { role: 'system', content: systemPrompt },
             { role: 'user', content: input },
         ], 100);
@@ -80,7 +72,7 @@ Return ONLY valid JSON (no markdown, no explanation) with exactly these fields:
   "dueDate": "YYYY-MM-DD or empty string if not mentioned"
 }`;
 
-    const content = await callOpenRouter([
+    const content = await callProxy([
         { role: 'system', content: systemPrompt },
         { role: 'user', content: prompt },
     ], 300);

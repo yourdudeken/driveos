@@ -11,8 +11,12 @@ declare global {
                         client_id: string;
                         scope: string;
                         callback: (response: GoogleTokenResponse) => void;
+                        /** Set to '' for a silent/non-interactive token refresh. */
+                        prompt?: string;
+                        /** Hint to pre-fill the account chooser with the known user email. */
+                        hint?: string;
                     }) => {
-                        requestAccessToken: () => void;
+                        requestAccessToken: (overrides?: { prompt?: string }) => void;
                     };
                     revoke: (accessToken: string, done: () => void) => void;
                 };

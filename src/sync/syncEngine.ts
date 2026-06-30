@@ -9,6 +9,9 @@ import type { Task } from '@/types';
 
 type SyncListener = (status: SyncStatus) => void;
 
+/** Called when both local and remote copies of a task diverged since last sync. */
+export type ConflictNotifier = (taskId: string, localUpdatedDate: string, remoteUpdatedDate: string) => void;
+
 export interface SyncStatus {
     state: 'idle' | 'syncing' | 'error' | 'offline';
     lastSyncAt: string | null;
@@ -31,6 +34,7 @@ class SyncEngine {
     private isRunning = false;
     private onlineHandler: (() => void) | null = null;
     private telemetry: SyncTelemetry = { totalSyncs: 0, totalConflicts: 0, totalBytesRead: 0, syncDurations: [] };
+    private onConflict: ConflictNotifier | null = null;
 
     getStatus(): SyncStatus {
         return { ...this.status };
@@ -55,9 +59,10 @@ class SyncEngine {
         this.notify();
     }
 
-    async start(pollIntervalMs = 60000) {
+    async start(pollIntervalMs = 60000, onConflict?: ConflictNotifier) {
         if (this.isRunning) return;
         this.isRunning = true;
+        if (onConflict) this.onConflict = onConflict;
 
         logger.info('Sync engine started', { pollIntervalMs });
 
@@ -136,6 +141,17 @@ class SyncEngine {
                         if (conflict) {
                             conflictCount++;
                             this.telemetry.totalConflicts++;
+
+                            // Notify the UI so the user knows their local edit was kept
+                            // and a conflicting remote change was discarded.
+                            if (this.onConflict && conflict.localTask && conflict.remoteTask) {
+                                this.onConflict(
+                                    conflict.taskId,
+                                    conflict.localTask.updatedDate,
+                                    conflict.remoteTask.updatedDate,
+                                );
+                            }
+
                             const resolved = await conflictResolver.resolve(conflict);
                             if (resolved) {
                                 if (!mergedIds.has(change.fileId)) {

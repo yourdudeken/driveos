@@ -18,6 +18,7 @@ import { googleDriveService } from '@/lib/googleDrive';
 import { useAISuggestions } from '@/hooks/useAISuggestions';
 import { AISuggestions } from '@/components/AISuggestions';
 import { generateTaskFromPrompt } from '@/lib/openrouter';
+import { logger } from '@/lib/logger';
 
 export function CreateTaskModal() {
     const [open, setOpen] = useState(false);
@@ -82,8 +83,8 @@ export function CreateTaskModal() {
             // Collapse AI panel so user sees the filled form
             setAiMode(false);
         } catch (err) {
-            console.error('AI generation failed:', err);
-            setAiError('Failed to generate. Check VITE_OPENROUTER_API_KEY or try again.');
+            logger.error('AI generation failed', undefined, err);
+            setAiError('Failed to generate. Please try again.');
         } finally {
             setIsGenerating(false);
         }
@@ -150,7 +151,7 @@ export function CreateTaskModal() {
             setAiPrompt('');
             setAiMode(false);
         } catch (error) {
-            console.error('Task creation failed:', error);
+            logger.error('Task creation failed', undefined, error);
         } finally {
             setIsUploading(false);
         }
