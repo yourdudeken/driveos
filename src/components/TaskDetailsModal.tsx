@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import type { Task, PriorityLevel, Attachments, AttachmentItem } from '@/types';
 import { useTasksStore } from '@/store/tasksStore';
 import { googleDriveService } from '@/lib/googleDrive';
+import { logger } from '@/lib/logger';
 import {
     Dialog,
     DialogContent,
@@ -36,7 +37,7 @@ function DriveImage({ fileId, alt }: { fileId: string; alt: string }) {
                     setLoading(false);
                 }
             } catch (error) {
-                console.error('Failed to fetch image:', error);
+                logger.error('Failed to fetch image', { fileId }, error);
                 if (isMounted) setLoading(false);
             }
         };
@@ -162,7 +163,7 @@ export function TaskDetailsModal({ task, onClose }: TaskDetailsModalProps) {
                 try {
                     await googleDriveService.deleteTask(id);
                 } catch (e) {
-                    console.error(`Failed to cleanup Drive file ${id}`, e);
+                    logger.error('Failed to cleanup Drive file', { fileId: id }, e);
                 }
             }
 
@@ -178,7 +179,7 @@ export function TaskDetailsModal({ task, onClose }: TaskDetailsModalProps) {
             setNewFiles([]);
             setRemovedAttachmentIds([]);
         } catch (error) {
-            console.error('Failed to save task:', error);
+            logger.error('Failed to save task', undefined, error);
         } finally {
             setIsSaving(false);
         }
