@@ -5,12 +5,19 @@ import { syncQueue } from './syncQueue';
 import { changeTracker } from './changeTracker';
 import { conflictResolver } from './conflictResolver';
 import { withRetry } from '@/lib/retry';
-import type { Task } from '@/types';
+import { useTasksStore } from '@/store/tasksStore';
+import { useBoardsStore } from '@/store/boardsStore';
+import type { Task, Board } from '@/types';
+import type { ConflictEvent } from './conflictResolver';
 
 type SyncListener = (status: SyncStatus) => void;
 
-/** Called when both local and remote copies of a task diverged since last sync. */
-export type ConflictNotifier = (taskId: string, localUpdatedDate: string, remoteUpdatedDate: string) => void;
+/**
+ * Called when a conflict is detected during sync.
+ * For board tasks (conflict.boardId set), the full event is passed so the UI
+ * can open the ConflictResolutionModal instead of auto-resolving.
+ */
+export type ConflictNotifier = (conflict: ConflictEvent) => void;
 
 export interface SyncStatus {
     state: 'idle' | 'syncing' | 'error' | 'offline';
@@ -121,6 +128,11 @@ class SyncEngine {
             const mergedTasks: Task[] = [...cachedTasks];
             const mergedIds = new Set(mergedTasks.map(t => t.id));
 
+            // Get current board and task folders for filtering
+            const tasksFolderId = useTasksStore.getState().folderIds?.TASKS;
+            const boardFolders = useBoardsStore.getState().boards as Board[];
+            const boardFolderIds = boardFolders.map((b: Board) => b.id);
+
             let conflictCount = 0;
 
             for (const change of changes) {
@@ -131,9 +143,23 @@ class SyncEngine {
                     continue;
                 }
 
+                // Filter out changes that do not belong to either the personal tasks folder
+                // or any of the shared board folders we are subscribed to.
+                const belongsToPersonal = change.parents?.includes(tasksFolderId || '');
+                const parentBoardId = change.parents?.find(p => boardFolderIds.includes(p));
+
+                if (!belongsToPersonal && !parentBoardId) {
+                    continue;
+                }
+
                 try {
                     const remoteContent = await withRetry(() => googleDriveService.readFile(change.fileId));
-                    const remoteTask: Task = { ...remoteContent, id: change.fileId, googleDriveFileId: change.fileId };
+                    const remoteTask: Task = {
+                        ...remoteContent,
+                        id: change.fileId,
+                        googleDriveFileId: change.fileId,
+                        ...(parentBoardId ? { boardId: parentBoardId } : {})
+                    };
 
                     const localTask = cachedMap.get(change.fileId);
                     if (localTask) {
@@ -142,14 +168,16 @@ class SyncEngine {
                             conflictCount++;
                             this.telemetry.totalConflicts++;
 
-                            // Notify the UI so the user knows their local edit was kept
-                            // and a conflicting remote change was discarded.
-                            if (this.onConflict && conflict.localTask && conflict.remoteTask) {
-                                this.onConflict(
-                                    conflict.taskId,
-                                    conflict.localTask.updatedDate,
-                                    conflict.remoteTask.updatedDate,
-                                );
+                            // Notify the UI with the full conflict event.
+                            // Board conflicts (resolution='pending') are handled by ConflictResolutionModal.
+                            // Personal conflicts show a toast and auto-resolve to keep_local.
+                            if (this.onConflict) {
+                                this.onConflict(conflict);
+                            }
+
+                            if (conflict.resolution === 'pending') {
+                                // Do NOT update the cache — keep local version until user decides.
+                                continue;
                             }
 
                             const resolved = await conflictResolver.resolve(conflict);
@@ -213,7 +241,12 @@ class SyncEngine {
             switch (mutation.type) {
                 case 'create':
                     if (mutation.payload) {
-                        await googleDriveService.createTask(mutation.payload as Omit<Task, 'id' | 'googleDriveFileId'>);
+                        const task = mutation.payload as Task;
+                        if (task.boardId) {
+                            await googleDriveService.createBoardTask(task, task.boardId);
+                        } else {
+                            await googleDriveService.createTask(task);
+                        }
                     }
                     break;
                 case 'update':

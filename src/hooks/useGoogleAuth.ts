@@ -131,5 +131,38 @@ export const useGoogleAuth = () => {
         storeLogout();
     }, [storeLogout]);
 
-    return { login, logout, isLoading };
+    /** Request broader drive scope incrementally for board collaboration. */
+    const requestDriveScope = useCallback(() => {
+        return new Promise<boolean>((resolve) => {
+            if (!window.google || !CLIENT_ID) {
+                logger.error('Google client not loaded');
+                resolve(false);
+                return;
+            }
+            const client = window.google.accounts.oauth2.initTokenClient({
+                client_id: CLIENT_ID,
+                scope: [
+                    'https://www.googleapis.com/auth/drive.file',
+                    'https://www.googleapis.com/auth/drive.install',
+                    'openid',
+                    'https://www.googleapis.com/auth/userinfo.profile',
+                    'https://www.googleapis.com/auth/userinfo.email',
+                    'https://www.googleapis.com/auth/drive',
+                ].join(' '),
+                hint: user?.email,
+                callback: (tokenResponse: GoogleTokenResponse) => {
+                    if (tokenResponse && !('error' in tokenResponse) && tokenResponse.access_token) {
+                        handleTokenResponse(tokenResponse, false)
+                            .then(() => resolve(true))
+                            .catch(() => resolve(false));
+                    } else {
+                        resolve(false);
+                    }
+                },
+            });
+            client.requestAccessToken();
+        });
+    }, [user?.email, handleTokenResponse]);
+
+    return { login, logout, isLoading, requestDriveScope };
 };

@@ -15,6 +15,7 @@ export interface ChangeEntry {
     fileId: string;
     removed: boolean;
     modifiedTime?: string;
+    parents?: string[];
 }
 
 export const changeTracker = {
@@ -36,14 +37,17 @@ export const changeTracker = {
             fields: 'changes(fileId,removed,file(modifiedTime,name,parents)),newStartPageToken',
             pageSize: '100',
             includeRemoved: 'true',
-            includeItemsFromAllDrives: 'false',
-            restrictToMyDrive: 'true',
+            includeItemsFromAllDrives: 'true',
+            restrictToMyDrive: 'false',
         };
 
         if (!pageToken) {
             // First time: get start page token
             const tokenResponse = await axios.get(`${DRIVE_API_URL}/changes/startPageToken`, {
                 headers: getHeaders(),
+                params: {
+                    supportsAllDrives: 'true',
+                }
             });
             const startToken = tokenResponse.data.startPageToken;
             await this.savePageToken(startToken);
@@ -51,14 +55,18 @@ export const changeTracker = {
         }
 
         const response = await axios.get(`${DRIVE_API_URL}/changes`, {
-            params,
+            params: {
+                ...params,
+                supportsAllDrives: 'true',
+            },
             headers: getHeaders(),
         });
 
-        const changes: ChangeEntry[] = (response.data.changes || []).map((c: { fileId: string; removed: boolean; file?: { modifiedTime?: string } }) => ({
+        const changes: ChangeEntry[] = (response.data.changes || []).map((c: { fileId: string; removed: boolean; file?: { modifiedTime?: string; parents?: string[] } }) => ({
             fileId: c.fileId,
             removed: c.removed,
             modifiedTime: c.file?.modifiedTime,
+            parents: c.file?.parents,
         }));
 
         const newPageToken = response.data.newStartPageToken || response.data.nextPageToken || pageToken;

@@ -2,6 +2,8 @@ import { useEffect, useRef } from 'react';
 import { syncEngine } from '@/sync/syncEngine';
 import { useTasksStore } from '@/store/tasksStore';
 import { useToast } from '@/components/Toast';
+import { useConflictStore } from '@/store/conflictStore';
+import type { ConflictEvent } from '@/sync/conflictResolver';
 
 export function useSyncEngine() {
     const started = useRef(false);
@@ -22,20 +24,26 @@ export function useSyncEngine() {
 
         /**
          * Surface conflicts to the user instead of silently discarding remote edits.
-         * The local version is kept (safest default), and a toast explains what happened
-         * so the user can check the conflict log if they want to inspect the remote version.
+         * For board tasks, conflicts are routed to the ConflictResolutionModal.
+         * For personal tasks, a toast explains that the local version won.
          */
-        const onConflict = (_taskId: string, _localDate: string, remoteDate: string) => {
-            const remoteFormatted = new Date(remoteDate).toLocaleString(undefined, {
-                month: 'short',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit',
-            });
-            showToast(
-                'warning',
-                `Sync conflict: a remote edit from ${remoteFormatted} was overridden by your local version. Check Conflict Log for details.`,
-            );
+        const onConflict = (conflict: ConflictEvent) => {
+            if (conflict.boardId) {
+                // Route board conflict to conflictStore for user review.
+                useConflictStore.getState().addConflict(conflict);
+            } else {
+                const remoteDate = conflict.remoteTask?.updatedDate || conflict.resolvedAt;
+                const remoteFormatted = new Date(remoteDate).toLocaleString(undefined, {
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                });
+                showToast(
+                    'warning',
+                    `Sync conflict: a remote edit from ${remoteFormatted} was overridden by your local version. Check Conflict Log for details.`,
+                );
+            }
         };
 
         syncEngine.start(60000, onConflict);

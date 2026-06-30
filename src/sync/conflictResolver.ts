@@ -17,7 +17,15 @@ export interface ConflictEvent {
     localTask?: Task;
     remoteTask?: Task;
     resolvedAt: string;
-    resolution: 'keep_local' | 'keep_remote' | 'merged';
+    /**
+     * 'keep_local'  — personal task, auto-resolved in favour of local.
+     * 'keep_remote' — caller explicitly chose remote.
+     * 'merged'      — field-level merge applied.
+     * 'pending'     — board task conflict awaiting user decision via ConflictResolutionModal.
+     */
+    resolution: 'keep_local' | 'keep_remote' | 'merged' | 'pending';
+    /** Present when the conflicting task belongs to a shared board. */
+    boardId?: string;
 }
 
 interface StoredMeta {
@@ -84,15 +92,18 @@ export const conflictResolver = {
                 remoteDate: remote.updatedDate,
             });
 
+            const isBoardTask = !!(local.boardId || remote.boardId);
+
             const event: ConflictEvent = {
                 taskId: local.id,
                 reason: ConflictReason.BOTH_MODIFIED,
                 localTask: local,
                 remoteTask: remote,
                 resolvedAt: new Date().toISOString(),
-                // Default: keep local version. The caller may override this before
-                // calling resolve(), or surface the conflict to the user via onConflict.
-                resolution: 'keep_local',
+                // Board conflicts are surfaced to the user via the ConflictResolutionModal.
+                // Personal conflicts fall back to keep_local (safe default across own devices).
+                resolution: isBoardTask ? 'pending' : 'keep_local',
+                boardId: local.boardId ?? remote.boardId,
             };
 
             await setTaskMeta(local.id, {
@@ -131,6 +142,8 @@ export const conflictResolver = {
                 updatedDate: new Date().toISOString(),
             };
         }
+        // 'pending' — board conflict awaiting user decision. Return null so
+        // the sync engine keeps the current local cache untouched.
         return null;
     },
 

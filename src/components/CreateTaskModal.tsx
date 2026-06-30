@@ -20,7 +20,11 @@ import { AISuggestions } from '@/components/AISuggestions';
 import { generateTaskFromPrompt } from '@/lib/openrouter';
 import { logger } from '@/lib/logger';
 
-export function CreateTaskModal() {
+interface CreateTaskModalProps {
+    boardId?: string | null;
+}
+
+export function CreateTaskModal({ boardId = null }: CreateTaskModalProps) {
     const [open, setOpen] = useState(false);
     const { addTask, isLoading } = useTasksStore();
 
@@ -113,6 +117,7 @@ export function CreateTaskModal() {
                 attachments,
                 createdDate: new Date().toISOString(),
                 updatedDate: new Date().toISOString(),
+                ...(boardId ? { boardId } : {}),
             });
 
             if (!savedTask.id) throw new Error("Task created but no ID returned");
